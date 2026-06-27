@@ -40,6 +40,10 @@
           <div class="text-caption text-medium-emphasis">特別管理加算</div>
           <div class="font-weight-bold">{{ labels.specialManagementCategory[store.estimate.specialManagementCategory] }}</div>
         </v-col>
+        <v-col cols="12" md="3">
+          <div class="text-caption text-medium-emphasis">高額療養費自己負担限度額</div>
+          <div class="font-weight-bold">{{ labels.highCostCareLimitCategory[store.estimate.highCostCareLimitCategory] }}</div>
+        </v-col>
       </v-row>
     </section>
 
@@ -108,11 +112,23 @@
           <div class="total-label">月額費用総額</div>
           <div class="total-value">{{ yen(calculation.totals.grandTotal) }}</div>
         </div>
+        <div v-if="calculation.totals.copaymentAmountBeforeLimit !== undefined" class="total-box">
+          <div class="total-label">上限適用前の利用者負担額</div>
+          <div class="total-value">{{ yen(calculation.totals.copaymentAmountBeforeLimit) }}</div>
+        </div>
+        <div v-if="calculation.totals.highCostCareLimitAmount !== undefined" class="total-box">
+          <div class="total-label">高額療養費自己負担限度額</div>
+          <div class="total-value">{{ yen(calculation.totals.highCostCareLimitAmount) }}</div>
+        </div>
         <div v-if="calculation.totals.copaymentAmount !== undefined" class="total-box">
-          <div class="total-label">利用者負担額の概算</div>
+          <div class="total-label">{{ calculation.totals.highCostCareLimitAmount !== undefined ? "高額療養費上限適用後の利用者負担額" : "利用者負担額の概算" }}</div>
           <div class="total-value">{{ yen(calculation.totals.copaymentAmount) }}</div>
         </div>
       </div>
+
+      <v-alert v-if="store.estimate?.highCostCareLimitCategory !== 'unset'" color="warning" icon="mdi-alert-circle-outline" variant="tonal" class="mt-4">
+        この上限は70歳以上・外来個人ごとの概算です。世帯合算、多数回該当、年間上限、公費、他医療機関分は含みません。
+      </v-alert>
 
       <div class="action-row">
         <v-btn variant="outlined" prepend-icon="mdi-arrow-left" @click="router.push({ name: 'monthly-input' })">月間入力へ戻る</v-btn>

@@ -87,6 +87,16 @@
             @update:model-value="saveHeader"
           />
         </v-col>
+        <v-col cols="12" md="3">
+          <v-select
+            v-model="form.highCostCareLimitCategory"
+            label="高額療養費自己負担限度額（70歳以上）"
+            :items="highCostCareLimitOptions"
+            item-title="title"
+            item-value="value"
+            @update:model-value="saveHeader"
+          />
+        </v-col>
       </v-row>
       <v-alert v-if="form.sameBuildingCategory === 'one'" type="warning" variant="tonal" density="comfortable" class="mt-2">
         1人区分は入力できますが、今回の正式対応範囲は基本療養費（Ⅱ）のみです。基本療養費（Ⅰ）が必要な場合は明細に警告し、合計には含めません。
@@ -136,8 +146,11 @@
       v-model="dialog"
       :monthly-estimate-id="store.estimate.id"
       :visit-date="selectedDate"
+      :target-month="form.targetMonth"
+      :existing-visit-dates="existingVisitDates"
       :visit="selectedVisit"
       @save="saveDailyVisit"
+      @bulk-save="saveDailyVisits"
       @delete="deleteDailyVisit"
     />
   </div>
@@ -151,6 +164,7 @@ import type {
   CopaymentRate,
   DailyVisitInput,
   DischargeJointGuidanceCountCategory,
+  HighCostCareLimitCategory,
   SameBuildingCategory,
   SingleBuildingResidentCategory,
   SpecialManagementCategory,
@@ -163,6 +177,7 @@ import { daysInMonth, formatMonth, isHoliday, isToday, isWeekend, toDateKey, wee
 import {
   copaymentOptions,
   dischargeJointGuidanceCountOptions,
+  highCostCareLimitOptions,
   notApplicableFirstOptions,
   sameBuildingOptions,
   singleBuildingResidentOptions,
@@ -187,7 +202,8 @@ const form = reactive({
   singleBuildingResidentCategory: "under_20" as SingleBuildingResidentCategory,
   specialManagementCategory: "none" as SpecialManagementCategory,
   dischargeJointGuidanceCountCategory: "none" as DischargeJointGuidanceCountCategory,
-  specialManagementGuidanceApplicable: "not_applicable" as ApplicableType
+  specialManagementGuidanceApplicable: "not_applicable" as ApplicableType,
+  highCostCareLimitCategory: "unset" as HighCostCareLimitCategory
 });
 
 store.load();
@@ -208,7 +224,8 @@ watch(
       singleBuildingResidentCategory: estimate.singleBuildingResidentCategory,
       specialManagementCategory: estimate.specialManagementCategory,
       dischargeJointGuidanceCountCategory: estimate.dischargeJointGuidanceCountCategory,
-      specialManagementGuidanceApplicable: estimate.specialManagementGuidanceApplicable
+      specialManagementGuidanceApplicable: estimate.specialManagementGuidanceApplicable,
+      highCostCareLimitCategory: estimate.highCostCareLimitCategory
     });
   },
   { immediate: true }
@@ -216,6 +233,7 @@ watch(
 
 const days = computed(() => (form.targetMonth ? daysInMonth(form.targetMonth) : []));
 const selectedVisit = computed(() => store.estimate?.dailyVisits.find((visit) => visit.visitDate === selectedDate.value));
+const existingVisitDates = computed(() => store.estimate?.dailyVisits.map((visit) => visit.visitDate) ?? []);
 const showMessage = computed({
   get: () => Boolean(store.message),
   set: (value: boolean) => {
@@ -238,6 +256,16 @@ async function saveDailyVisit(visit: DailyVisitInput): Promise<void> {
   if (!store.estimate) return;
   try {
     await store.saveDailyVisit({ monthlyEstimateId: store.estimate.id, visit });
+    dialog.value = false;
+  } catch (error) {
+    store.error = error instanceof Error ? error.message : "保存に失敗しました。";
+  }
+}
+
+async function saveDailyVisits(visits: DailyVisitInput[]): Promise<void> {
+  if (!store.estimate) return;
+  try {
+    await store.saveDailyVisits({ monthlyEstimateId: store.estimate.id, visits });
     dialog.value = false;
   } catch (error) {
     store.error = error instanceof Error ? error.message : "保存に失敗しました。";

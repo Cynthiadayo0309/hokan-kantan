@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { MonthlyCalculationResult, MonthlyEstimate, MonthlyEstimateInput, PricingVersion, SaveDailyVisitPayload } from "../../shared/types";
+import type { MonthlyCalculationResult, MonthlyEstimate, MonthlyEstimateInput, PricingVersion, SaveDailyVisitPayload, SaveDailyVisitsPayload } from "../../shared/types";
 
 type State = {
   estimate: MonthlyEstimate | null;
@@ -42,6 +42,12 @@ export const useEstimateStore = defineStore("estimate", {
       const visit = await window.hokanApi.saveDailyVisit(payload);
       await this.load();
       this.message = `${Number(visit.visitDate.slice(5, 7))}月${Number(visit.visitDate.slice(8, 10))}日の訪問内容を保存しました。`;
+    },
+    async saveDailyVisits(payload: SaveDailyVisitsPayload): Promise<void> {
+      this.error = "";
+      this.estimate = await window.hokanApi.saveDailyVisits(payload);
+      this.calculation = null;
+      this.message = `${payload.visits.length}日分の訪問内容を保存しました。`;
     },
     async deleteDailyVisit(monthlyEstimateId: number, visitDate: string): Promise<void> {
       this.error = "";

@@ -31,6 +31,14 @@ export type MultipleVisitEligibilityType = "none" | "specified_disease" | "speci
 export type MultipleStaffCategory = "none" | "nurse_companion" | "assistant_nurse_companion" | "care_worker_normal" | "care_worker_special";
 export type LongVisitEligibilityType = "none" | "under_15_severe_child" | "appendix_8" | "special_instruction" | "other";
 export type DischargeSupportGuidanceCategory = "none" | "normal" | "long";
+export type HighCostCareLimitCategory =
+  | "unset"
+  | "active_income_3"
+  | "active_income_2"
+  | "active_income_1"
+  | "general"
+  | "low_income_2"
+  | "low_income_1";
 
 export type AdditionType =
   | "none"
@@ -115,6 +123,7 @@ export type MonthlyEstimate = {
   specialManagementCategory: SpecialManagementCategory;
   dischargeJointGuidanceCountCategory: DischargeJointGuidanceCountCategory;
   specialManagementGuidanceApplicable: ApplicableType;
+  highCostCareLimitCategory: HighCostCareLimitCategory;
   dailyVisits: DailyVisit[];
   updatedAt: string;
 };
@@ -132,6 +141,7 @@ export type MonthlyEstimateInput = {
   specialManagementCategory: SpecialManagementCategory;
   dischargeJointGuidanceCountCategory: DischargeJointGuidanceCountCategory;
   specialManagementGuidanceApplicable: ApplicableType;
+  highCostCareLimitCategory: HighCostCareLimitCategory;
 };
 
 export type CalculationLine = {
@@ -156,7 +166,10 @@ export type MonthlyCalculationResult = {
     management: number;
     additions: number;
     grandTotal: number;
+    copaymentAmountBeforeLimit?: number;
     copaymentAmount?: number;
+    highCostCareLimitAmount?: number;
+    highCostCareLimitApplied?: boolean;
   };
   warnings: string[];
   usesSamplePricing: boolean;
@@ -217,6 +230,11 @@ export type SaveDailyVisitPayload = {
   visit: DailyVisitInput;
 };
 
+export type SaveDailyVisitsPayload = {
+  monthlyEstimateId: number;
+  visits: DailyVisitInput[];
+};
+
 export type DeleteDailyVisitPayload = {
   monthlyEstimateId: number;
   visitDate: string;
@@ -236,6 +254,7 @@ export type HokanApi = {
   getEstimate: () => Promise<MonthlyEstimate>;
   saveEstimate: (payload: MonthlyEstimateInput) => Promise<MonthlyEstimate>;
   saveDailyVisit: (payload: SaveDailyVisitPayload) => Promise<DailyVisit>;
+  saveDailyVisits: (payload: SaveDailyVisitsPayload) => Promise<MonthlyEstimate>;
   deleteDailyVisit: (payload: DeleteDailyVisitPayload) => Promise<MonthlyEstimate>;
   calculateMonthlyEstimate: (payload: { monthlyEstimateId: number }) => Promise<MonthlyCalculationResult>;
   resetEstimate: (payload: ResetEstimatePayload) => Promise<MonthlyEstimate>;
@@ -319,6 +338,15 @@ export const labels = {
     none: "対象外",
     normal: "通常",
     long: "長時間指導"
+  },
+  highCostCareLimitCategory: {
+    unset: "未設定",
+    active_income_3: "現役並みⅢ",
+    active_income_2: "現役並みⅡ",
+    active_income_1: "現役並みⅠ",
+    general: "一般",
+    low_income_2: "住民税非課税Ⅱ",
+    low_income_1: "住民税非課税Ⅰ"
   },
   unitType: {
     per_visit: "1回当たり",

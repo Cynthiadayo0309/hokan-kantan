@@ -5,6 +5,7 @@ import path from "node:path";
 
 const INITIAL_MIGRATION_ID = "001_initial_schema";
 const FORMAL_PRICING_MIGRATION_ID = "002_formal_pricing";
+const HIGH_COST_CARE_LIMIT_MIGRATION_ID = "003_high_cost_care_limit";
 
 export class DatabaseManager {
   private db?: Database.Database;
@@ -27,13 +28,14 @@ export class DatabaseManager {
 
     this.ensureMigrationTable();
     const hasPendingMigration =
-      !this.hasMigration(INITIAL_MIGRATION_ID) || !this.hasMigration(FORMAL_PRICING_MIGRATION_ID);
+      !this.hasMigration(INITIAL_MIGRATION_ID) || !this.hasMigration(FORMAL_PRICING_MIGRATION_ID) || !this.hasMigration(HIGH_COST_CARE_LIMIT_MIGRATION_ID);
     if (existed && hasPendingMigration) {
       this.backupDatabase(dbPath);
     }
 
     this.runInitialMigration();
     this.runFormalPricingMigration();
+    this.runHighCostCareLimitMigration();
     this.seedSamplePricingRules();
     this.seedFormalPricingRules();
     return this.db;
@@ -78,6 +80,7 @@ export class DatabaseManager {
           special_management_category TEXT NOT NULL DEFAULT 'none',
           discharge_joint_guidance_count_category TEXT NOT NULL DEFAULT 'none',
           special_management_guidance_applicable TEXT NOT NULL DEFAULT 'not_applicable',
+          high_cost_care_limit_category TEXT NOT NULL DEFAULT 'unset',
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
         );
@@ -234,6 +237,19 @@ export class DatabaseManager {
 
       this.connection.prepare("UPDATE pricing_rules SET enabled = 0, sample_price = 1, is_sample = 1 WHERE sample_price = 1 OR is_sample = 1").run();
       this.markMigrationApplied(FORMAL_PRICING_MIGRATION_ID);
+    });
+
+    migrate();
+  }
+
+  private runHighCostCareLimitMigration(): void {
+    if (this.hasMigration(HIGH_COST_CARE_LIMIT_MIGRATION_ID)) {
+      return;
+    }
+
+    const migrate = this.connection.transaction(() => {
+      this.addColumnIfMissing("monthly_estimates", "high_cost_care_limit_category", "TEXT NOT NULL DEFAULT 'unset'");
+      this.markMigrationApplied(HIGH_COST_CARE_LIMIT_MIGRATION_ID);
     });
 
     migrate();

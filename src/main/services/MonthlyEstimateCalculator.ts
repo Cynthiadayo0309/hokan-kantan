@@ -2,6 +2,7 @@ import type { AdditionType, CalculationLine, DailyVisit, MonthlyCalculationResul
 import { labels } from "../../shared/types";
 import { calculateCopayment } from "./CopaymentCalculator";
 import { EligibilityEvaluator, professionCategoryFor } from "./EligibilityEvaluator";
+import { calculateHighCostCareLimit, shouldWarnHighCostCareLimitRevision } from "./HighCostCareLimitCalculator";
 import { PricingRuleResolver } from "./PricingRuleResolver";
 import { countEligibleBeforeOrOn, monthlyVisitDayOrdinal, weeklyEligibleOrdinal, weeklyVisitDayOrdinal } from "./VisitDayCounters";
 
@@ -41,11 +42,25 @@ export class MonthlyEstimateCalculator {
     const management = included.filter((line) => line.category === "management").reduce((sum, line) => sum + line.subtotal, 0);
     const additions = included.filter((line) => line.category === "addition").reduce((sum, line) => sum + line.subtotal, 0);
     const grandTotal = basic + management + additions;
-    const copaymentAmount = calculateCopayment(grandTotal, estimate.copaymentRate);
+    const copaymentAmountBeforeLimit = calculateCopayment(grandTotal, estimate.copaymentRate);
+    const highCostLimit = calculateHighCostCareLimit(grandTotal, copaymentAmountBeforeLimit, estimate.highCostCareLimitCategory);
+    const copaymentAmount = highCostLimit.appliedAmount ?? copaymentAmountBeforeLimit;
+    if (shouldWarnHighCostCareLimitRevision(estimate.targetMonth, estimate.highCostCareLimitCategory)) {
+      warnings.push("2026年8月以降は高額療養費制度の見直し予定があります。自己負担限度額を確認してください。");
+    }
 
     return {
       lines: merged,
-      totals: { basic, management, additions, grandTotal, copaymentAmount },
+      totals: {
+        basic,
+        management,
+        additions,
+        grandTotal,
+        copaymentAmountBeforeLimit: estimate.highCostCareLimitCategory === "unset" ? undefined : copaymentAmountBeforeLimit,
+        copaymentAmount,
+        highCostCareLimitAmount: highCostLimit.limitAmount,
+        highCostCareLimitApplied: highCostLimit.applied
+      },
       warnings: Array.from(new Set(warnings)),
       usesSamplePricing
     };

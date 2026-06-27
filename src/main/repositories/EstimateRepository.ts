@@ -28,10 +28,10 @@ export class EstimateRepository {
         (
           patient_name, facility_name, target_month, same_building_category, copayment_rate,
           basic_fee_type, station_category, single_building_resident_category, special_management_category,
-          discharge_joint_guidance_count_category, special_management_guidance_applicable,
+          discharge_joint_guidance_count_category, special_management_guidance_applicable, high_cost_care_limit_category,
           created_at, updated_at
         )
-        VALUES ('', '', ?, 'three_to_nine', 'unset', 'type_2', 'standard', 'under_20', 'none', 'none', 'not_applicable', ?, ?)`
+        VALUES ('', '', ?, 'three_to_nine', 'unset', 'type_2', 'standard', 'under_20', 'none', 'none', 'not_applicable', 'unset', ?, ?)`
       )
       .run(targetMonth, timestamp, timestamp);
     return this.getEstimate(Number(result.lastInsertRowid));
@@ -49,7 +49,7 @@ export class EstimateRepository {
           `UPDATE monthly_estimates
            SET patient_name = ?, facility_name = ?, target_month = ?, same_building_category = ?, copayment_rate = ?,
                basic_fee_type = ?, station_category = ?, single_building_resident_category = ?, special_management_category = ?,
-               discharge_joint_guidance_count_category = ?, special_management_guidance_applicable = ?, updated_at = ?
+               discharge_joint_guidance_count_category = ?, special_management_guidance_applicable = ?, high_cost_care_limit_category = ?, updated_at = ?
            WHERE id = ?`
         )
         .run(
@@ -64,6 +64,7 @@ export class EstimateRepository {
           input.specialManagementCategory,
           input.dischargeJointGuidanceCountCategory,
           input.specialManagementGuidanceApplicable,
+          input.highCostCareLimitCategory,
           timestamp,
           input.id
         );
@@ -76,10 +77,10 @@ export class EstimateRepository {
         (
           patient_name, facility_name, target_month, same_building_category, copayment_rate,
           basic_fee_type, station_category, single_building_resident_category, special_management_category,
-          discharge_joint_guidance_count_category, special_management_guidance_applicable,
+          discharge_joint_guidance_count_category, special_management_guidance_applicable, high_cost_care_limit_category,
           created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         input.patientName.trim(),
@@ -93,6 +94,7 @@ export class EstimateRepository {
         input.specialManagementCategory,
         input.dischargeJointGuidanceCountCategory,
         input.specialManagementGuidanceApplicable,
+        input.highCostCareLimitCategory,
         timestamp,
         timestamp
       );
@@ -101,131 +103,31 @@ export class EstimateRepository {
 
   saveDailyVisit(monthlyEstimateId: number, visit: DailyVisitInput): DailyVisit {
     this.assertEstimateCanAcceptVisits(monthlyEstimateId);
-    const normalized = DailyVisitCalculator.normalize(visit);
     const timestamp = new Date().toISOString();
 
     const transaction = this.db.transaction(() => {
-      const existing = this.db
-        .prepare("SELECT id FROM daily_visits WHERE monthly_estimate_id = ? AND visit_date = ?")
-        .get(monthlyEstimateId, visit.visitDate) as { id: number } | undefined;
-
-      let dailyVisitId: number;
-      if (existing) {
-        dailyVisitId = existing.id;
-        this.db
-          .prepare(
-            `UPDATE daily_visits SET
-              basic_fee_applicable = ?, management_fee_applicable = ?, profession = ?, visit_count = ?,
-              long_visit_type = ?, multiple_staff_type = ?, emergency_type = ?, special_management_type = ?,
-              discharge_joint_guidance_type = ?, discharge_support_guidance_type = ?,
-              time_visit_requested_by_patient_or_family = ?, multiple_visit_eligibility_type = ?,
-              multiple_staff_category = ?, single_person_visit_difficult = ?, multiple_staff_consent = ?,
-              simultaneous_multiple_staff_visit = ?, long_visit_eligibility_type = ?, emergency_unplanned = ?,
-              emergency_requested_by_patient_or_family = ?, emergency_physician_instruction = ?,
-              discharge_support_guidance_category = ?, discharge_support_total_minutes = ?, first_visit_after_discharge = ?,
-              warnings_json = ?, updated_at = ?
-             WHERE id = ?`
-          )
-          .run(
-            visit.basicFeeApplicable,
-            visit.managementFeeApplicable,
-            visit.profession,
-            visit.visitCount,
-            visit.longVisitType,
-            visit.multipleStaffType,
-            visit.emergencyType,
-            visit.specialManagementType,
-            visit.dischargeJointGuidanceType,
-            visit.dischargeSupportGuidanceType,
-            visit.timeVisitRequestedByPatientOrFamily,
-            visit.multipleVisitEligibilityType,
-            visit.multipleStaffCategory,
-            visit.singlePersonVisitDifficult,
-            visit.multipleStaffConsent,
-            visit.simultaneousMultipleStaffVisit,
-            visit.longVisitEligibilityType,
-            visit.emergencyUnplanned,
-            visit.emergencyRequestedByPatientOrFamily,
-            visit.emergencyPhysicianInstruction,
-            visit.dischargeSupportGuidanceCategory,
-            visit.dischargeSupportTotalMinutes,
-            visit.firstVisitAfterDischarge,
-            JSON.stringify(normalized.warnings),
-            timestamp,
-            dailyVisitId
-          );
-        this.db.prepare("DELETE FROM visit_time_slots WHERE daily_visit_id = ?").run(dailyVisitId);
-      } else {
-        const result = this.db
-          .prepare(
-            `INSERT INTO daily_visits (
-              monthly_estimate_id, visit_date, basic_fee_applicable, management_fee_applicable, profession,
-              visit_count, long_visit_type, multiple_staff_type, emergency_type, special_management_type,
-              discharge_joint_guidance_type, discharge_support_guidance_type,
-              time_visit_requested_by_patient_or_family, multiple_visit_eligibility_type,
-              multiple_staff_category, single_person_visit_difficult, multiple_staff_consent,
-              simultaneous_multiple_staff_visit, long_visit_eligibility_type, emergency_unplanned,
-              emergency_requested_by_patient_or_family, emergency_physician_instruction,
-              discharge_support_guidance_category, discharge_support_total_minutes, first_visit_after_discharge,
-              warnings_json, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .run(
-            monthlyEstimateId,
-            visit.visitDate,
-            visit.basicFeeApplicable,
-            visit.managementFeeApplicable,
-            visit.profession,
-            visit.visitCount,
-            visit.longVisitType,
-            visit.multipleStaffType,
-            visit.emergencyType,
-            visit.specialManagementType,
-            visit.dischargeJointGuidanceType,
-            visit.dischargeSupportGuidanceType,
-            visit.timeVisitRequestedByPatientOrFamily,
-            visit.multipleVisitEligibilityType,
-            visit.multipleStaffCategory,
-            visit.singlePersonVisitDifficult,
-            visit.multipleStaffConsent,
-            visit.simultaneousMultipleStaffVisit,
-            visit.longVisitEligibilityType,
-            visit.emergencyUnplanned,
-            visit.emergencyRequestedByPatientOrFamily,
-            visit.emergencyPhysicianInstruction,
-            visit.dischargeSupportGuidanceCategory,
-            visit.dischargeSupportTotalMinutes,
-            visit.firstVisitAfterDischarge,
-            JSON.stringify(normalized.warnings),
-            timestamp,
-            timestamp
-          );
-        dailyVisitId = Number(result.lastInsertRowid);
-      }
-
-      const insertSlot = this.db.prepare(
-        `INSERT INTO visit_time_slots
-        (daily_visit_id, sequence, start_time, end_time, end_day_type, duration_minutes, time_zone_type, time_zone_breakdown_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      );
-      for (const slot of normalized.slots) {
-        insertSlot.run(
-          dailyVisitId,
-          slot.sequence,
-          slot.startTime,
-          slot.endTime,
-          slot.endDayType,
-          slot.durationMinutes,
-          slot.timeZoneType,
-          JSON.stringify(slot.timeZoneBreakdown)
-        );
-      }
+      const dailyVisitId = this.upsertDailyVisit(monthlyEstimateId, visit, timestamp);
       this.touchEstimate(monthlyEstimateId);
       return dailyVisitId;
     });
 
     const id = transaction();
     return this.getDailyVisit(id);
+  }
+
+  saveDailyVisits(monthlyEstimateId: number, visits: DailyVisitInput[]): MonthlyEstimate {
+    this.assertEstimateCanAcceptVisits(monthlyEstimateId);
+    const timestamp = new Date().toISOString();
+
+    const transaction = this.db.transaction(() => {
+      for (const visit of visits) {
+        this.upsertDailyVisit(monthlyEstimateId, visit, timestamp);
+      }
+      this.touchEstimate(monthlyEstimateId);
+    });
+
+    transaction();
+    return this.getEstimate(monthlyEstimateId);
   }
 
   deleteDailyVisit(monthlyEstimateId: number, visitDate: string): MonthlyEstimate {
@@ -319,6 +221,7 @@ export class EstimateRepository {
       specialManagementCategory: row.special_management_category ?? "none",
       dischargeJointGuidanceCountCategory: row.discharge_joint_guidance_count_category ?? "none",
       specialManagementGuidanceApplicable: row.special_management_guidance_applicable ?? "not_applicable",
+      highCostCareLimitCategory: row.high_cost_care_limit_category ?? "unset",
       dailyVisits,
       updatedAt: row.updated_at
     };
@@ -330,6 +233,127 @@ export class EstimateRepository {
       throw new Error("訪問内容が見つかりません。");
     }
     return this.mapDailyVisit(row);
+  }
+
+  private upsertDailyVisit(monthlyEstimateId: number, visit: DailyVisitInput, timestamp: string): number {
+    const normalized = DailyVisitCalculator.normalize(visit);
+    const existing = this.db
+      .prepare("SELECT id FROM daily_visits WHERE monthly_estimate_id = ? AND visit_date = ?")
+      .get(monthlyEstimateId, visit.visitDate) as { id: number } | undefined;
+
+    let dailyVisitId: number;
+    if (existing) {
+      dailyVisitId = existing.id;
+      this.db
+        .prepare(
+          `UPDATE daily_visits SET
+            basic_fee_applicable = ?, management_fee_applicable = ?, profession = ?, visit_count = ?,
+            long_visit_type = ?, multiple_staff_type = ?, emergency_type = ?, special_management_type = ?,
+            discharge_joint_guidance_type = ?, discharge_support_guidance_type = ?,
+            time_visit_requested_by_patient_or_family = ?, multiple_visit_eligibility_type = ?,
+            multiple_staff_category = ?, single_person_visit_difficult = ?, multiple_staff_consent = ?,
+            simultaneous_multiple_staff_visit = ?, long_visit_eligibility_type = ?, emergency_unplanned = ?,
+            emergency_requested_by_patient_or_family = ?, emergency_physician_instruction = ?,
+            discharge_support_guidance_category = ?, discharge_support_total_minutes = ?, first_visit_after_discharge = ?,
+            warnings_json = ?, updated_at = ?
+           WHERE id = ?`
+        )
+        .run(
+          visit.basicFeeApplicable,
+          visit.managementFeeApplicable,
+          visit.profession,
+          visit.visitCount,
+          visit.longVisitType,
+          visit.multipleStaffType,
+          visit.emergencyType,
+          visit.specialManagementType,
+          visit.dischargeJointGuidanceType,
+          visit.dischargeSupportGuidanceType,
+          visit.timeVisitRequestedByPatientOrFamily,
+          visit.multipleVisitEligibilityType,
+          visit.multipleStaffCategory,
+          visit.singlePersonVisitDifficult,
+          visit.multipleStaffConsent,
+          visit.simultaneousMultipleStaffVisit,
+          visit.longVisitEligibilityType,
+          visit.emergencyUnplanned,
+          visit.emergencyRequestedByPatientOrFamily,
+          visit.emergencyPhysicianInstruction,
+          visit.dischargeSupportGuidanceCategory,
+          visit.dischargeSupportTotalMinutes,
+          visit.firstVisitAfterDischarge,
+          JSON.stringify(normalized.warnings),
+          timestamp,
+          dailyVisitId
+        );
+      this.db.prepare("DELETE FROM visit_time_slots WHERE daily_visit_id = ?").run(dailyVisitId);
+    } else {
+      const result = this.db
+        .prepare(
+          `INSERT INTO daily_visits (
+            monthly_estimate_id, visit_date, basic_fee_applicable, management_fee_applicable, profession,
+            visit_count, long_visit_type, multiple_staff_type, emergency_type, special_management_type,
+            discharge_joint_guidance_type, discharge_support_guidance_type,
+            time_visit_requested_by_patient_or_family, multiple_visit_eligibility_type,
+            multiple_staff_category, single_person_visit_difficult, multiple_staff_consent,
+            simultaneous_multiple_staff_visit, long_visit_eligibility_type, emergency_unplanned,
+            emergency_requested_by_patient_or_family, emergency_physician_instruction,
+            discharge_support_guidance_category, discharge_support_total_minutes, first_visit_after_discharge,
+            warnings_json, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          monthlyEstimateId,
+          visit.visitDate,
+          visit.basicFeeApplicable,
+          visit.managementFeeApplicable,
+          visit.profession,
+          visit.visitCount,
+          visit.longVisitType,
+          visit.multipleStaffType,
+          visit.emergencyType,
+          visit.specialManagementType,
+          visit.dischargeJointGuidanceType,
+          visit.dischargeSupportGuidanceType,
+          visit.timeVisitRequestedByPatientOrFamily,
+          visit.multipleVisitEligibilityType,
+          visit.multipleStaffCategory,
+          visit.singlePersonVisitDifficult,
+          visit.multipleStaffConsent,
+          visit.simultaneousMultipleStaffVisit,
+          visit.longVisitEligibilityType,
+          visit.emergencyUnplanned,
+          visit.emergencyRequestedByPatientOrFamily,
+          visit.emergencyPhysicianInstruction,
+          visit.dischargeSupportGuidanceCategory,
+          visit.dischargeSupportTotalMinutes,
+          visit.firstVisitAfterDischarge,
+          JSON.stringify(normalized.warnings),
+          timestamp,
+          timestamp
+        );
+      dailyVisitId = Number(result.lastInsertRowid);
+    }
+
+    const insertSlot = this.db.prepare(
+      `INSERT INTO visit_time_slots
+      (daily_visit_id, sequence, start_time, end_time, end_day_type, duration_minutes, time_zone_type, time_zone_breakdown_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+    for (const slot of normalized.slots) {
+      insertSlot.run(
+        dailyVisitId,
+        slot.sequence,
+        slot.startTime,
+        slot.endTime,
+        slot.endDayType,
+        slot.durationMinutes,
+        slot.timeZoneType,
+        JSON.stringify(slot.timeZoneBreakdown)
+      );
+    }
+
+    return dailyVisitId;
   }
 
   private mapDailyVisit(row: Record<string, any>): DailyVisit {

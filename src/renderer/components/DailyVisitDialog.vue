@@ -146,6 +146,27 @@
         </v-col>
       </v-row>
 
+      <div class="section-panel mt-4 mb-4">
+        <h3 class="text-subtitle-1 font-weight-bold mb-3">同じ内容を別日に使う</h3>
+        <v-row>
+          <v-col cols="12" md="4">
+            <v-text-field v-model="copyTargetDate" label="複写先日付" type="date" :min="monthStartDate" :max="monthEndDate" />
+          </v-col>
+          <v-col cols="12" md="8" class="d-flex align-center">
+            <v-btn variant="outlined" prepend-icon="mdi-content-copy" @click="copyToDate">この内容を指定日に複写</v-btn>
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field v-model="rangeStartDate" label="範囲の開始日" type="date" :min="monthStartDate" :max="monthEndDate" />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field v-model="rangeEndDate" label="範囲の終了日" type="date" :min="monthStartDate" :max="monthEndDate" />
+          </v-col>
+          <v-col cols="12" md="4" class="d-flex align-center">
+            <v-btn variant="outlined" prepend-icon="mdi-calendar-range" @click="copyToRange">この内容を範囲に反映</v-btn>
+          </v-col>
+        </v-row>
+      </div>
+
       <div class="action-row">
         <v-btn color="primary" prepend-icon="mdi-content-save" @click="save">この日の内容を保存</v-btn>
         <v-btn color="error" variant="tonal" prepend-icon="mdi-delete" @click="deleteVisit">この日の内容を削除</v-btn>
@@ -169,24 +190,31 @@ import {
   professionOptions,
   timeOptions
 } from "../utils/options";
+import { toSavableDailyVisitInput } from "../utils/dailyVisitInput";
 import { previewTime } from "../utils/timePreview";
 
 const props = defineProps<{
   modelValue: boolean;
   monthlyEstimateId: number;
   visitDate: string;
+  targetMonth: string;
+  existingVisitDates: string[];
   visit?: DailyVisit;
 }>();
 
 const emit = defineEmits<{
   "update:modelValue": [value: boolean];
   save: [value: DailyVisitInput];
+  bulkSave: [value: DailyVisitInput[]];
   delete: [];
 }>();
 
 const error = ref("");
 const visitCountKind = ref<"1" | "2" | "three_or_more">("1");
 const exactVisitCount = ref(3);
+const copyTargetDate = ref("");
+const rangeStartDate = ref("");
+const rangeEndDate = ref("");
 
 const form = reactive<DailyVisitInput>(createDefaultVisit(""));
 
@@ -201,6 +229,12 @@ const endDayOptions = [
   { value: "next_day", title: "翌日" }
 ];
 const displayDate = computed(() => `${Number(props.visitDate.slice(5, 7))}月${Number(props.visitDate.slice(8, 10))}日`);
+const monthStartDate = computed(() => `${props.targetMonth}-01`);
+const monthEndDate = computed(() => {
+  const [year, month] = props.targetMonth.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${props.targetMonth}-${String(lastDay).padStart(2, "0")}`;
+});
 
 watch(
   () => [props.modelValue, props.visitDate, props.visit?.id],
@@ -214,6 +248,9 @@ watch(
       exactVisitCount.value = form.visitCount;
     }
     syncSlotCount();
+    copyTargetDate.value = "";
+    rangeStartDate.value = props.visitDate;
+    rangeEndDate.value = props.visitDate;
     error.value = "";
   },
   { immediate: true }
@@ -261,15 +298,7 @@ function createDefaultSlot(sequence: number): VisitTimeSlotInput {
 }
 
 function fromVisit(visit: DailyVisit): DailyVisitInput {
-  return {
-    ...visit,
-    timeSlots: visit.timeSlots.map((slot) => ({
-      sequence: slot.sequence,
-      startTime: slot.startTime,
-      endTime: slot.endTime,
-      endDayType: slot.endDayType
-    }))
-  };
+  return toSavableDailyVisitInput(visit, visit.visitDate);
 }
 
 function syncSlotCount(): void {
@@ -291,12 +320,81 @@ function previewFor(slot: VisitTimeSlotInput) {
 
 function save(): void {
   error.value = "";
+  const payload = buildSavableVisit(props.visitDate);
+  if (!payload) return;
+  emit("save", payload);
+}
+
+function copyToDate(): void {
+  error.value = "";
+  if (!copyTargetDate.value) {
+    error.value = "複写先日付を選択してください。";
+    return;
+  }
+  if (!isDateInTargetMonth(copyTargetDate.value)) {
+    error.value = "複写先日付は対象年月の範囲内で選択してください。";
+    return;
+  }
+  const payload = buildSavableVisit(copyTargetDate.value);
+  if (!payload) return;
+  if (!confirmOverwrite([copyTargetDate.value])) return;
+  emit("bulkSave", [payload]);
+}
+
+function copyToRange(): void {
+  error.value = "";
+  if (!rangeStartDate.value || !rangeEndDate.value) {
+    error.value = "範囲の開始日と終了日を選択してください。";
+    return;
+  }
+  if (!isDateInTargetMonth(rangeStartDate.value) || !isDateInTargetMonth(rangeEndDate.value)) {
+    error.value = "範囲は対象年月の中で選択してください。";
+    return;
+  }
+  if (rangeEndDate.value < rangeStartDate.value) {
+    error.value = "終了日は開始日以降の日付を選択してください。";
+    return;
+  }
+  const dates = datesBetween(rangeStartDate.value, rangeEndDate.value);
+  if (dates.length > 31) {
+    error.value = "一度に反映できる範囲は31日までです。";
+    return;
+  }
+  const visits = dates.map((date) => buildSavableVisit(date));
+  if (visits.some((visit) => !visit)) return;
+  if (!confirmOverwrite(dates)) return;
+  emit("bulkSave", visits as DailyVisitInput[]);
+}
+
+function buildSavableVisit(visitDate: string): DailyVisitInput | null {
   const badPreview = form.timeSlots.map(previewFor).find((preview) => preview.error);
   if (badPreview) {
     error.value = badPreview.error;
-    return;
+    return null;
   }
-  emit("save", { ...form, visitDate: props.visitDate, timeSlots: form.timeSlots.map((slot) => ({ ...slot })) });
+  return toSavableDailyVisitInput(form, visitDate);
+}
+
+function confirmOverwrite(targetDates: string[]): boolean {
+  const overwriteDates = targetDates.filter((date) => props.existingVisitDates.includes(date));
+  if (overwriteDates.length === 0) return true;
+  const labels = overwriteDates.map((date) => `${Number(date.slice(5, 7))}月${Number(date.slice(8, 10))}日`).join("、");
+  return window.confirm(`${labels}にはすでに訪問内容があります。上書きしてよろしいですか？`);
+}
+
+function isDateInTargetMonth(value: string): boolean {
+  return value >= monthStartDate.value && value <= monthEndDate.value;
+}
+
+function datesBetween(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  while (current <= end) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
 }
 
 function deleteVisit(): void {

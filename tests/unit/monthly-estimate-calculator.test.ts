@@ -192,6 +192,81 @@ describe("MonthlyEstimateCalculator formal pricing", () => {
     expect(roundCopaymentToTenYen(1235)).toBe(1240);
     expect(roundCopaymentToTenYen(1239)).toBe(1240);
   });
+
+  it("keeps copayment unchanged when high cost care limit is unset", () => {
+    const result = calculate(
+      estimate({
+        copaymentRate: "10",
+        highCostCareLimitCategory: "unset",
+        dailyVisits: Array.from({ length: 4 }, (_, index) => visit({ visitDate: `2026-06-${String(index + 1).padStart(2, "0")}` }))
+      })
+    );
+
+    expect(result.totals.copaymentAmountBeforeLimit).toBeUndefined();
+    expect(result.totals.highCostCareLimitAmount).toBeUndefined();
+    expect(result.totals.copaymentAmount).toBe(1160);
+  });
+
+  it("applies general high cost care outpatient personal limit for age 70 or older", () => {
+    const result = calculate(
+      estimate({
+        copaymentRate: "30",
+        highCostCareLimitCategory: "general",
+        dailyVisits: Array.from({ length: 21 }, (_, index) => `2026-06-${String(index + 1).padStart(2, "0")}`).map((date) =>
+          visit({ visitDate: date, profession: "nurse" })
+        )
+      })
+    );
+
+    expect(result.totals.copaymentAmountBeforeLimit).toBeGreaterThan(18000);
+    expect(result.totals.highCostCareLimitAmount).toBe(18000);
+    expect(result.totals.copaymentAmount).toBe(18000);
+    expect(result.totals.highCostCareLimitApplied).toBe(true);
+  });
+
+  it("does not apply general high cost care limit when copayment is below limit", () => {
+    const result = calculate(
+      estimate({
+        copaymentRate: "10",
+        highCostCareLimitCategory: "general",
+        dailyVisits: [visit({ visitDate: "2026-06-10" })]
+      })
+    );
+
+    expect(result.totals.copaymentAmountBeforeLimit).toBe(280);
+    expect(result.totals.highCostCareLimitAmount).toBe(18000);
+    expect(result.totals.copaymentAmount).toBe(280);
+    expect(result.totals.highCostCareLimitApplied).toBe(false);
+  });
+
+  it("calculates active income high cost care limit from total medical cost", () => {
+    const result = calculate(
+      estimate({
+        copaymentRate: "30",
+        highCostCareLimitCategory: "active_income_1",
+        sameBuildingCategory: "two",
+        dailyVisits: Array.from({ length: 31 }, (_, index) => `2026-06-${String(index + 1).padStart(2, "0")}`).map((date) =>
+          visit({ visitDate: date, profession: "nurse" })
+        )
+      })
+    );
+
+    expect(result.totals.highCostCareLimitAmount).toBe(Math.round(80100 + Math.max(0, result.totals.grandTotal - 267000) * 0.01));
+  });
+
+  it("does not show copayment even when high cost care limit is selected if copayment rate is unset", () => {
+    const result = calculate(estimate({ copaymentRate: "unset", highCostCareLimitCategory: "general" }));
+
+    expect(result.totals.copaymentAmountBeforeLimit).toBeUndefined();
+    expect(result.totals.highCostCareLimitAmount).toBeUndefined();
+    expect(result.totals.copaymentAmount).toBeUndefined();
+  });
+
+  it("warns that high cost care limit needs confirmation from August 2026", () => {
+    const result = calculate(estimate({ targetMonth: "2026-08", copaymentRate: "10", highCostCareLimitCategory: "general" }));
+
+    expect(result.warnings.some((warning) => warning.includes("高額療養費制度の見直し予定"))).toBe(true);
+  });
 });
 
 function calculate(estimateValue: MonthlyEstimate) {
@@ -212,6 +287,7 @@ function estimate(overrides: Partial<MonthlyEstimate> = {}): MonthlyEstimate {
     specialManagementCategory: "none",
     dischargeJointGuidanceCountCategory: "none",
     specialManagementGuidanceApplicable: "not_applicable",
+    highCostCareLimitCategory: "unset",
     updatedAt: "2026-06-10T00:00:00.000Z",
     dailyVisits: [visit()],
     ...overrides

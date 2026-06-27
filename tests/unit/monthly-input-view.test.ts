@@ -27,6 +27,7 @@ describe("MonthlyInputView", () => {
           specialManagementCategory: "none",
           dischargeJointGuidanceCountCategory: "none",
           specialManagementGuidanceApplicable: "not_applicable",
+          highCostCareLimitCategory: "unset",
           dailyVisits: [],
           updatedAt: "2026-06-01T00:00:00.000Z"
         }),
@@ -35,6 +36,7 @@ describe("MonthlyInputView", () => {
         calculateMonthlyEstimate: vi.fn(),
         resetEstimate: vi.fn(),
         saveDailyVisit: vi.fn(),
+        saveDailyVisits: vi.fn(),
         deleteDailyVisit: vi.fn()
       }
     });

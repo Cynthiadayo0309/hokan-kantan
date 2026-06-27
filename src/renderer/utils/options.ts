@@ -3,6 +3,7 @@ import type {
   CopaymentRate,
   DischargeJointGuidanceCountCategory,
   DischargeSupportGuidanceCategory,
+  HighCostCareLimitCategory,
   LongVisitEligibilityType,
   MultipleStaffCategory,
   MultipleVisitEligibilityType,
@@ -46,6 +47,10 @@ export const longVisitEligibilityOptions = Object.entries(labels.longVisitEligib
 }));
 export const dischargeSupportGuidanceOptions = Object.entries(labels.dischargeSupportGuidanceCategory).map(([value, title]) => ({
   value: value as DischargeSupportGuidanceCategory,
+  title
+}));
+export const highCostCareLimitOptions = Object.entries(labels.highCostCareLimitCategory).map(([value, title]) => ({
+  value: value as HighCostCareLimitCategory,
   title
 }));
 export const applicableOptions: Array<{ value: ApplicableType; title: string }> = [

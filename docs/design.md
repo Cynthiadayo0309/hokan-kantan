@@ -33,6 +33,7 @@ mainプロセス側で入力値を検証し、DB保存と計算を行う。
 - `EligibilityEvaluator`: 職種制限、依頼者条件、緊急訪問条件、退院関連の算定可否を判定する。
 - `VisitDayCounters` / `WeeklyVisitDayCounter`: 月内・週内の訪問日数順位を判定する。
 - `CopaymentCalculator`: 自己負担割合適用後の10円未満四捨五入を担当する。
+- `HighCostCareLimitCalculator`: 70歳以上・外来個人ごとの高額療養費自己負担限度額を概算適用する。
 - `MonthlyEstimateCalculator`: 明細、小計、総額、自己負担額を生成する。
 
 正式単価は推測しない。2026-06-01適用開始の正式料金は `resources/pricing/formal-pricing.json` から登録し、既存サンプル料金は削除せず無効化する。今回の正式対応範囲外である訪問看護基本療養費（Ⅰ）は、警告を表示して合計に含めない。
