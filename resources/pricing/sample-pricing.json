@@ -1,0 +1,110 @@
+[
+  {
+    "itemCode": "BASIC_SAMPLE",
+    "itemName": "訪問看護基本療養費",
+    "category": "basic",
+    "unitPrice": 5550,
+    "unitType": "per_day",
+    "additionType": "none",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "MANAGEMENT_SAMPLE",
+    "itemName": "訪問看護管理療養費",
+    "category": "management",
+    "unitPrice": 3000,
+    "unitType": "per_day",
+    "additionType": "none",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_NIGHT_EARLY_SAMPLE",
+    "itemName": "夜間・早朝訪問に関する加算",
+    "category": "addition",
+    "unitPrice": 2100,
+    "unitType": "per_day",
+    "additionType": "night_or_early_morning",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_MIDNIGHT_SAMPLE",
+    "itemName": "深夜訪問に関する加算",
+    "category": "addition",
+    "unitPrice": 4200,
+    "unitType": "per_day",
+    "additionType": "midnight",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_MULTIPLE_VISITS_SAMPLE",
+    "itemName": "複数回訪問に関する費用",
+    "category": "addition",
+    "unitPrice": 1000,
+    "unitType": "per_visit",
+    "additionType": "multiple_visits",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_LONG_VISIT_SAMPLE",
+    "itemName": "長時間訪問に関する加算",
+    "category": "addition",
+    "unitPrice": 5200,
+    "unitType": "per_day",
+    "additionType": "long_visit",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_MULTIPLE_STAFF_SAMPLE",
+    "itemName": "複数名訪問に関する加算",
+    "category": "addition",
+    "unitPrice": 4500,
+    "unitType": "per_day",
+    "additionType": "multiple_staff",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_EMERGENCY_SAMPLE",
+    "itemName": "緊急訪問に関する加算",
+    "category": "addition",
+    "unitPrice": 2650,
+    "unitType": "per_day",
+    "additionType": "emergency",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_SPECIAL_1_SAMPLE",
+    "itemName": "特別管理加算Ⅰ",
+    "category": "addition",
+    "unitPrice": 5000,
+    "unitType": "per_month",
+    "additionType": "special_management_1",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_SPECIAL_2_SAMPLE",
+    "itemName": "特別管理加算Ⅱ",
+    "category": "addition",
+    "unitPrice": 2500,
+    "unitType": "per_month",
+    "additionType": "special_management_2",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_DISCHARGE_JOINT_SAMPLE",
+    "itemName": "退院時共同指導加算",
+    "category": "addition",
+    "unitPrice": 8000,
+    "unitType": "per_day",
+    "additionType": "discharge_joint_guidance",
+    "note": "サンプル料金"
+  },
+  {
+    "itemCode": "ADD_DISCHARGE_SUPPORT_SAMPLE",
+    "itemName": "退院支援指導加算",
+    "category": "addition",
+    "unitPrice": 6000,
+    "unitType": "per_day",
+    "additionType": "discharge_support_guidance",
+    "note": "サンプル料金"
+  }
+]

@@ -1,0 +1,329 @@
+export type SameBuildingCategory =
+  | "one"
+  | "two"
+  | "one_or_two"
+  | "three_to_nine"
+  | "ten_to_nineteen"
+  | "twenty_to_forty_nine"
+  | "fifty_or_more";
+
+export type CopaymentRate = "unset" | "10" | "20" | "30";
+export type ApplicableType = "applicable" | "not_applicable";
+export type EndDayType = "same_day" | "next_day";
+export type TimeZoneType = "midnight" | "early_morning" | "daytime" | "night" | "mixed";
+export type PricingCategory = "basic" | "management" | "addition";
+export type Profession =
+  | "public_health_nurse"
+  | "midwife"
+  | "nurse"
+  | "assistant_nurse"
+  | "physical_therapist"
+  | "occupational_therapist"
+  | "speech_therapist";
+
+export type ProfessionCategory = "nurse_group" | "assistant_nurse" | "rehab" | "any";
+export type BasicFeeType = "type_2";
+export type StationCategory = "enhanced_1" | "enhanced_2" | "enhanced_3" | "enhanced_4" | "standard";
+export type SingleBuildingResidentCategory = "under_20" | "twenty_to_forty_nine" | "fifty_or_more";
+export type SpecialManagementCategory = "none" | "yen_2500" | "yen_5000";
+export type DischargeJointGuidanceCountCategory = "none" | "normal" | "two_times";
+export type MultipleVisitEligibilityType = "none" | "specified_disease" | "special_instruction";
+export type MultipleStaffCategory = "none" | "nurse_companion" | "assistant_nurse_companion" | "care_worker_normal" | "care_worker_special";
+export type LongVisitEligibilityType = "none" | "under_15_severe_child" | "appendix_8" | "special_instruction" | "other";
+export type DischargeSupportGuidanceCategory = "none" | "normal" | "long";
+
+export type AdditionType =
+  | "none"
+  | "long_visit"
+  | "multiple_staff"
+  | "emergency"
+  | "special_management"
+  | "special_management_guidance"
+  | "discharge_joint_guidance"
+  | "discharge_support_guidance"
+  | "night_or_early_morning"
+  | "midnight"
+  | "multiple_visits";
+
+export type UnitType = "per_visit" | "per_day" | "per_month" | "per_guidance";
+export type RoundingType = "round" | "none";
+
+export type TimeZoneBreakdown = {
+  zone: Exclude<TimeZoneType, "mixed">;
+  minutes: number;
+};
+
+export type VisitTimeSlotInput = {
+  sequence: number;
+  startTime: string;
+  endTime: string;
+  endDayType: EndDayType;
+};
+
+export type VisitTimeSlot = VisitTimeSlotInput & {
+  id?: number;
+  durationMinutes: number;
+  timeZoneType: TimeZoneType;
+  timeZoneBreakdown: TimeZoneBreakdown[];
+};
+
+export type DailyVisitInput = {
+  id?: number;
+  visitDate: string;
+  basicFeeApplicable: ApplicableType;
+  managementFeeApplicable: ApplicableType;
+  profession: Profession;
+  visitCount: number;
+  longVisitType: ApplicableType;
+  multipleStaffType: ApplicableType;
+  emergencyType: ApplicableType;
+  specialManagementType: "none" | "type_1" | "type_2";
+  dischargeJointGuidanceType: ApplicableType;
+  dischargeSupportGuidanceType: ApplicableType;
+  timeVisitRequestedByPatientOrFamily: ApplicableType;
+  multipleVisitEligibilityType: MultipleVisitEligibilityType;
+  multipleStaffCategory: MultipleStaffCategory;
+  singlePersonVisitDifficult: ApplicableType;
+  multipleStaffConsent: ApplicableType;
+  simultaneousMultipleStaffVisit: ApplicableType;
+  longVisitEligibilityType: LongVisitEligibilityType;
+  emergencyUnplanned: ApplicableType;
+  emergencyRequestedByPatientOrFamily: ApplicableType;
+  emergencyPhysicianInstruction: ApplicableType;
+  dischargeSupportGuidanceCategory: DischargeSupportGuidanceCategory;
+  dischargeSupportTotalMinutes: number;
+  firstVisitAfterDischarge: ApplicableType;
+  timeSlots: VisitTimeSlotInput[];
+};
+
+export type DailyVisit = Omit<DailyVisitInput, "timeSlots"> & {
+  id: number;
+  timeSlots: VisitTimeSlot[];
+  warnings: string[];
+};
+
+export type MonthlyEstimate = {
+  id: number;
+  patientName: string;
+  facilityName: string;
+  targetMonth: string;
+  sameBuildingCategory: SameBuildingCategory;
+  copaymentRate: CopaymentRate;
+  basicFeeType: BasicFeeType;
+  stationCategory: StationCategory;
+  singleBuildingResidentCategory: SingleBuildingResidentCategory;
+  specialManagementCategory: SpecialManagementCategory;
+  dischargeJointGuidanceCountCategory: DischargeJointGuidanceCountCategory;
+  specialManagementGuidanceApplicable: ApplicableType;
+  dailyVisits: DailyVisit[];
+  updatedAt: string;
+};
+
+export type MonthlyEstimateInput = {
+  id?: number;
+  patientName: string;
+  facilityName: string;
+  targetMonth: string;
+  sameBuildingCategory: SameBuildingCategory;
+  copaymentRate: CopaymentRate;
+  basicFeeType: BasicFeeType;
+  stationCategory: StationCategory;
+  singleBuildingResidentCategory: SingleBuildingResidentCategory;
+  specialManagementCategory: SpecialManagementCategory;
+  dischargeJointGuidanceCountCategory: DischargeJointGuidanceCountCategory;
+  specialManagementGuidanceApplicable: ApplicableType;
+};
+
+export type CalculationLine = {
+  category: PricingCategory;
+  serviceName: string;
+  conditionSummary: string;
+  targetDates: string[];
+  quantity: number;
+  unitPrice: number;
+  unitType?: UnitType;
+  subtotal: number;
+  evidence?: string;
+  warning?: string;
+  includedInTotal?: boolean;
+  note?: string;
+};
+
+export type MonthlyCalculationResult = {
+  lines: CalculationLine[];
+  totals: {
+    basic: number;
+    management: number;
+    additions: number;
+    grandTotal: number;
+    copaymentAmount?: number;
+  };
+  warnings: string[];
+  usesSamplePricing: boolean;
+};
+
+export type PricingRule = {
+  id: number;
+  itemCode: string;
+  itemName: string;
+  category: PricingCategory;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  profession?: Profession | "any" | null;
+  sameBuildingCategory?: SameBuildingCategory | "any" | null;
+  weeklyVisitCountCategory?: string | null;
+  dailyVisitCountCategory?: string | null;
+  timeZoneType?: TimeZoneType | "any" | null;
+  additionType?: AdditionType | "none" | null;
+  unitPrice: number;
+  unitType: UnitType;
+  roundingType: RoundingType;
+  note?: string | null;
+  enabled: boolean;
+  samplePrice: boolean;
+  feeFamily?: string | null;
+  feeCode?: string | null;
+  professionCategory?: ProfessionCategory | null;
+  basicFeeType?: BasicFeeType | null;
+  sameBuildingDailyCountCategory?: SameBuildingCategory | "one_to_two" | "any" | null;
+  singleBuildingResidentCategory?: SingleBuildingResidentCategory | "any" | null;
+  stationCategory?: StationCategory | "any" | null;
+  weeklyVisitDayRange?: string | null;
+  monthlyVisitDayRange?: string | null;
+  dailyVisitCountRange?: string | null;
+  timeZoneCategory?: "night_early" | "midnight" | "any" | null;
+  companionCategory?: MultipleStaffCategory | "any" | null;
+  maximumFrequencyType?: string | null;
+  maximumFrequencyCount?: number | null;
+  sourceNote?: string | null;
+};
+
+export type EligibilityRule = {
+  id: number;
+  ruleCode: string;
+  feeCode: string;
+  professionAllowList: ProfessionCategory[];
+  requiredConditions: string[];
+  frequencyLimitType?: string | null;
+  frequencyLimitCount?: number | null;
+  warningMessage?: string | null;
+  errorMessage?: string | null;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+};
+
+export type SaveDailyVisitPayload = {
+  monthlyEstimateId: number;
+  visit: DailyVisitInput;
+};
+
+export type DeleteDailyVisitPayload = {
+  monthlyEstimateId: number;
+  visitDate: string;
+};
+
+export type ResetEstimatePayload = {
+  monthlyEstimateId: number;
+};
+
+export type PricingVersion = {
+  label: string;
+  usesSamplePricing: boolean;
+  ruleCount: number;
+};
+
+export type HokanApi = {
+  getEstimate: () => Promise<MonthlyEstimate>;
+  saveEstimate: (payload: MonthlyEstimateInput) => Promise<MonthlyEstimate>;
+  saveDailyVisit: (payload: SaveDailyVisitPayload) => Promise<DailyVisit>;
+  deleteDailyVisit: (payload: DeleteDailyVisitPayload) => Promise<MonthlyEstimate>;
+  calculateMonthlyEstimate: (payload: { monthlyEstimateId: number }) => Promise<MonthlyCalculationResult>;
+  resetEstimate: (payload: ResetEstimatePayload) => Promise<MonthlyEstimate>;
+  getPricingVersion: () => Promise<PricingVersion>;
+};
+
+export const labels = {
+  sameBuildingCategory: {
+    one: "1人",
+    two: "2人",
+    one_or_two: "1人または2人（要確認）",
+    three_to_nine: "3人以上9人以下",
+    ten_to_nineteen: "10人以上19人以下",
+    twenty_to_forty_nine: "20人以上49人以下",
+    fifty_or_more: "50人以上"
+  },
+  copaymentRate: {
+    unset: "未設定",
+    "10": "1割",
+    "20": "2割",
+    "30": "3割"
+  },
+  profession: {
+    public_health_nurse: "保健師",
+    midwife: "助産師",
+    nurse: "看護師",
+    assistant_nurse: "准看護師",
+    physical_therapist: "理学療法士",
+    occupational_therapist: "作業療法士",
+    speech_therapist: "言語聴覚士"
+  },
+  timeZone: {
+    midnight: "深夜",
+    early_morning: "早朝",
+    daytime: "通常",
+    night: "夜間",
+    mixed: "時間帯またぎ"
+  },
+  stationCategory: {
+    enhanced_1: "機能強化型1",
+    enhanced_2: "機能強化型2",
+    enhanced_3: "機能強化型3",
+    enhanced_4: "機能強化型4",
+    standard: "上記以外"
+  },
+  singleBuildingResidentCategory: {
+    under_20: "20人未満",
+    twenty_to_forty_nine: "20人以上49人以下",
+    fifty_or_more: "50人以上"
+  },
+  specialManagementCategory: {
+    none: "対象外",
+    yen_2500: "2,500円区分",
+    yen_5000: "5,000円区分"
+  },
+  dischargeJointGuidanceCountCategory: {
+    none: "対象外",
+    normal: "対象",
+    two_times: "特定疾病等により2回対象"
+  },
+  multipleVisitEligibilityType: {
+    none: "対象外",
+    specified_disease: "厚生労働大臣が定める疾病等",
+    special_instruction: "特別訪問看護指示書あり"
+  },
+  multipleStaffCategory: {
+    none: "対象外",
+    nurse_companion: "看護師等が同行",
+    assistant_nurse_companion: "准看護師が同行",
+    care_worker_normal: "その他職員が同行（通常）",
+    care_worker_special: "その他職員が同行（特定要件）"
+  },
+  longVisitEligibilityType: {
+    none: "対象外",
+    under_15_severe_child: "15歳未満の超重症児・準超重症児",
+    appendix_8: "別表第8対象",
+    special_instruction: "特別訪問看護指示書等",
+    other: "その他対象要件"
+  },
+  dischargeSupportGuidanceCategory: {
+    none: "対象外",
+    normal: "通常",
+    long: "長時間指導"
+  },
+  unitType: {
+    per_visit: "1回当たり",
+    per_day: "1日当たり",
+    per_month: "1月当たり",
+    per_guidance: "1回当たり"
+  }
+} as const;

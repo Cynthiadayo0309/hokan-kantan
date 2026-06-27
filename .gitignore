@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-electron/
+release/
+.git.invalid-backup/
+*.log
+*.db
+*.db-*
+*.bak
+.env
+.env.*
+.DS_Store
+Thumbs.db
