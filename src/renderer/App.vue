@@ -5,6 +5,21 @@
         <div class="app-title">訪看かんたん計算</div>
         <div class="app-subtitle">施設内訪問看護 月額費用シミュレーター</div>
       </v-app-bar-title>
+      <div class="app-icon-actions">
+        <v-btn
+          variant="text"
+          color="white"
+          prepend-icon="mdi-image-edit-outline"
+          :loading="iconLoading === 'select'"
+          title="使用権限のある画像を選んでください。"
+          @click="selectCustomIcon"
+        >
+          アイコン変更
+        </v-btn>
+        <v-btn v-if="iconPreference?.hasCustomIcon" variant="text" color="white" prepend-icon="mdi-restore" :loading="iconLoading === 'reset'" @click="resetCustomIcon">
+          標準に戻す
+        </v-btn>
+      </div>
     </v-app-bar>
 
     <v-main>
@@ -24,13 +39,61 @@
         <router-view />
       </div>
     </v-main>
+    <v-snackbar v-model="showIconMessage" color="primary" timeout="4500">{{ iconMessage }}</v-snackbar>
   </v-app>
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
+import type { IconPreference } from "../shared/types";
 import { useEstimateStore } from "./stores/estimateStore";
 
 const route = useRoute();
 const store = useEstimateStore();
+const iconPreference = ref<IconPreference | null>(null);
+const iconLoading = ref<"" | "select" | "reset">("");
+const iconMessage = ref("");
+const showIconMessage = computed({
+  get: () => Boolean(iconMessage.value),
+  set: (value: boolean) => {
+    if (!value) iconMessage.value = "";
+  }
+});
+
+onMounted(loadIconPreference);
+
+async function loadIconPreference(): Promise<void> {
+  try {
+    iconPreference.value = await window.hokanApi.getIconPreference();
+  } catch {
+    iconPreference.value = null;
+  }
+}
+
+async function selectCustomIcon(): Promise<void> {
+  iconLoading.value = "select";
+  try {
+    const result = await window.hokanApi.selectCustomIcon();
+    iconMessage.value = result.message;
+    await loadIconPreference();
+  } catch (error) {
+    iconMessage.value = error instanceof Error ? error.message : "アイコン変更に失敗しました。";
+  } finally {
+    iconLoading.value = "";
+  }
+}
+
+async function resetCustomIcon(): Promise<void> {
+  iconLoading.value = "reset";
+  try {
+    const result = await window.hokanApi.resetCustomIcon();
+    iconMessage.value = result.message;
+    await loadIconPreference();
+  } catch (error) {
+    iconMessage.value = error instanceof Error ? error.message : "アイコンを戻せませんでした。";
+  } finally {
+    iconLoading.value = "";
+  }
+}
 </script>

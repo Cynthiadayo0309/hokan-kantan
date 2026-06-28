@@ -27,6 +27,14 @@ body {
   line-height: 1.2;
 }
 
+.app-icon-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+
 .step-nav {
   display: flex;
   gap: 8px;
@@ -131,8 +139,121 @@ body {
   color: #6d807c;
 }
 
+.calendar-wrap {
+  overflow: auto;
+  border: 2px solid #263d39;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(132px, 1fr));
+  min-width: 924px;
+}
+
+.calendar-weekday {
+  min-height: 44px;
+  padding: 10px;
+  border-right: 1px solid #6d807c;
+  border-bottom: 1px solid #6d807c;
+  background: #dcebe7;
+  color: #143f3a;
+  font-weight: 800;
+  text-align: center;
+}
+
+.calendar-slot {
+  min-height: 118px;
+  border-right: 1px solid #6d807c;
+  border-bottom: 1px solid #6d807c;
+}
+
+.calendar-day {
+  width: 100%;
+  min-height: 118px;
+  height: 100%;
+  padding: 8px;
+  border: 0;
+  background: #ffffff;
+  color: #173d38;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.calendar-day:hover {
+  outline: 3px solid #166b64;
+  outline-offset: -3px;
+}
+
+.calendar-day.weekend,
+.calendar-day.holiday {
+  background: #fff7e8;
+}
+
+.calendar-day.today {
+  box-shadow: inset 0 0 0 3px #2d7d46;
+}
+
+.calendar-day.has-visit {
+  background: #eef7f4;
+}
+
+.calendar-day.has-visit.weekend,
+.calendar-day.has-visit.holiday {
+  background: #fff4d8;
+}
+
+.calendar-date {
+  display: flex;
+  min-height: 26px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.day-badge {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.today-badge {
+  background: #2d7d46;
+  color: #ffffff;
+}
+
+.holiday-badge {
+  background: #f3d29a;
+  color: #5b3d00;
+}
+
+.calendar-day .visit-summary {
+  display: block;
+  white-space: pre-line;
+  color: #173d38;
+  font-weight: 650;
+}
+
+.calendar-day .empty-day {
+  display: block;
+  margin-top: 18px;
+  color: #6d807c;
+  font-weight: 700;
+  text-align: center;
+}
+
 .action-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   justify-content: flex-end;
   align-items: center;
@@ -195,6 +316,10 @@ body {
 @media (max-width: 900px) {
   .app-shell {
     padding: 14px;
+  }
+
+  .app-icon-actions {
+    display: none;
   }
 
   .totals-grid {

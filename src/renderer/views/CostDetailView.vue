@@ -1,6 +1,7 @@
 <template>
   <div>
     <v-alert v-if="store.error" type="error" variant="tonal" class="mb-4">{{ store.error }}</v-alert>
+    <v-snackbar v-model="showOutputMessage" color="primary" timeout="3500">{{ outputMessage }}</v-snackbar>
 
     <section v-if="store.estimate" class="section-panel mb-4">
       <v-row>
@@ -131,6 +132,10 @@
       </v-alert>
 
       <div class="action-row">
+        <v-btn variant="outlined" prepend-icon="mdi-file-eye-outline" :loading="outputLoading === 'preview'" @click="previewReport">印刷プレビュー</v-btn>
+        <v-btn variant="outlined" prepend-icon="mdi-printer" :loading="outputLoading === 'print'" @click="printReport">印刷</v-btn>
+        <v-btn variant="outlined" prepend-icon="mdi-file-pdf-box" :loading="outputLoading === 'pdf'" @click="exportPdf">PDF保存</v-btn>
+        <v-btn variant="outlined" prepend-icon="mdi-file-excel-box" :loading="outputLoading === 'excel'" @click="exportExcel">Excel保存</v-btn>
         <v-btn variant="outlined" prepend-icon="mdi-arrow-left" @click="router.push({ name: 'monthly-input' })">月間入力へ戻る</v-btn>
         <v-btn color="primary" prepend-icon="mdi-refresh" @click="recalculate">再計算する</v-btn>
       </div>
@@ -139,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import type { PricingCategory } from "../../shared/types";
 import { labels } from "../../shared/types";
@@ -149,6 +154,14 @@ import { formatMonth } from "../utils/date";
 const router = useRouter();
 const store = useEstimateStore();
 const calculation = computed(() => store.calculation);
+const outputLoading = ref<"" | "preview" | "print" | "pdf" | "excel">("");
+const outputMessage = ref("");
+const showOutputMessage = computed({
+  get: () => Boolean(outputMessage.value),
+  set: (value: boolean) => {
+    if (!value) outputMessage.value = "";
+  }
+});
 
 onMounted(async () => {
   if (!store.estimate) {
@@ -164,6 +177,50 @@ async function recalculate(): Promise<void> {
     await store.calculate();
   } catch (error) {
     store.error = error instanceof Error ? error.message : "再計算に失敗しました。";
+  }
+}
+
+async function previewReport(): Promise<void> {
+  await runOutput("preview", async (monthlyEstimateId) => {
+    await window.hokanApi.previewMonthlyReport({ monthlyEstimateId });
+    outputMessage.value = "印刷プレビューを開きました。";
+  });
+}
+
+async function printReport(): Promise<void> {
+  await runOutput("print", async (monthlyEstimateId) => {
+    const result = await window.hokanApi.printMonthlyReport({ monthlyEstimateId });
+    if (!result.canceled) outputMessage.value = "印刷を開始しました。";
+  });
+}
+
+async function exportPdf(): Promise<void> {
+  await runOutput("pdf", async (monthlyEstimateId) => {
+    const result = await window.hokanApi.exportMonthlyReportPdf({ monthlyEstimateId });
+    if (!result.canceled) outputMessage.value = "PDFを保存しました。";
+  });
+}
+
+async function exportExcel(): Promise<void> {
+  await runOutput("excel", async (monthlyEstimateId) => {
+    const result = await window.hokanApi.exportMonthlyReportExcel({ monthlyEstimateId });
+    if (!result.canceled) outputMessage.value = "Excelを保存しました。";
+  });
+}
+
+async function runOutput(kind: "preview" | "print" | "pdf" | "excel", action: (monthlyEstimateId: number) => Promise<void>): Promise<void> {
+  if (!store.estimate) return;
+  outputLoading.value = kind;
+  store.error = "";
+  try {
+    if (!store.calculation) {
+      await store.calculate();
+    }
+    await action(store.estimate.id);
+  } catch (error) {
+    store.error = error instanceof Error ? error.message : "出力に失敗しました。";
+  } finally {
+    outputLoading.value = "";
   }
 }
 

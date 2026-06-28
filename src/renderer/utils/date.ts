@@ -4,6 +4,31 @@ export function daysInMonth(targetMonth: string): Date[] {
   return Array.from({ length: lastDay }, (_, index) => new Date(year, month - 1, index + 1));
 }
 
+export type CalendarDay = {
+  date: Date | null;
+  dateKey: string;
+};
+
+export function calendarWeeksInMonth(targetMonth: string): CalendarDay[][] {
+  const days = daysInMonth(targetMonth);
+  if (days.length === 0) return [];
+
+  const firstWeekday = days[0].getDay();
+  const cells: CalendarDay[] = [
+    ...Array.from({ length: firstWeekday }, () => ({ date: null, dateKey: "" })),
+    ...days.map((date) => ({ date, dateKey: toDateKey(date) }))
+  ];
+
+  const trailingCount = (7 - (cells.length % 7)) % 7;
+  cells.push(...Array.from({ length: trailingCount }, () => ({ date: null, dateKey: "" })));
+
+  const weeks: CalendarDay[][] = [];
+  for (let index = 0; index < cells.length; index += 7) {
+    weeks.push(cells.slice(index, index + 7));
+  }
+  return weeks;
+}
+
 export function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }

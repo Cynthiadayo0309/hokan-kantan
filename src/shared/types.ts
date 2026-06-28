@@ -244,6 +244,27 @@ export type ResetEstimatePayload = {
   monthlyEstimateId: number;
 };
 
+export type MonthlyReportExportPayload = {
+  monthlyEstimateId: number;
+};
+
+export type MonthlyReportExportResult = {
+  canceled: boolean;
+  filePath?: string;
+};
+
+export type IconPreference = {
+  hasCustomIcon: boolean;
+  iconPath?: string;
+  message: string;
+};
+
+export type IconOperationResult = {
+  applied: boolean;
+  message: string;
+  iconPath?: string;
+};
+
 export type PricingVersion = {
   label: string;
   usesSamplePricing: boolean;
@@ -259,6 +280,13 @@ export type HokanApi = {
   calculateMonthlyEstimate: (payload: { monthlyEstimateId: number }) => Promise<MonthlyCalculationResult>;
   resetEstimate: (payload: ResetEstimatePayload) => Promise<MonthlyEstimate>;
   getPricingVersion: () => Promise<PricingVersion>;
+  previewMonthlyReport: (payload: MonthlyReportExportPayload) => Promise<void>;
+  printMonthlyReport: (payload: MonthlyReportExportPayload) => Promise<MonthlyReportExportResult>;
+  exportMonthlyReportPdf: (payload: MonthlyReportExportPayload) => Promise<MonthlyReportExportResult>;
+  exportMonthlyReportExcel: (payload: MonthlyReportExportPayload) => Promise<MonthlyReportExportResult>;
+  getIconPreference: () => Promise<IconPreference>;
+  selectCustomIcon: () => Promise<IconOperationResult>;
+  resetCustomIcon: () => Promise<IconOperationResult>;
 };
 
 export const labels = {

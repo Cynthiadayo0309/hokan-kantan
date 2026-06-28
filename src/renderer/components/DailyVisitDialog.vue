@@ -59,92 +59,102 @@
         </div>
       </div>
 
-      <v-row>
-        <v-col cols="12" md="4">
-          <v-select
-            v-model="form.timeVisitRequestedByPatientOrFamily"
-            label="夜間等訪問の求め"
-            :items="notApplicableFirstOptions"
-            item-title="title"
-            item-value="value"
-          />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select
-            v-model="form.multipleVisitEligibilityType"
-            label="難病等複数回訪問要件"
-            :items="multipleVisitEligibilityOptions"
-            item-title="title"
-            item-value="value"
-          />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select
-            v-model="form.multipleStaffCategory"
-            label="複数名訪問区分"
-            :items="multipleStaffCategoryOptions"
-            item-title="title"
-            item-value="value"
-          />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select v-model="form.singlePersonVisitDifficult" label="1人訪問が困難" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select v-model="form.multipleStaffConsent" label="複数名訪問の同意" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select v-model="form.simultaneousMultipleStaffVisit" label="同時訪問" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select
-            v-model="form.longVisitEligibilityType"
-            label="長時間訪問要件"
-            :items="longVisitEligibilityOptions"
-            item-title="title"
-            item-value="value"
-          />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select v-model="form.longVisitType" label="長時間訪問の算定候補" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select v-model="form.emergencyUnplanned" label="定期予定外の緊急訪問" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select
-            v-model="form.emergencyRequestedByPatientOrFamily"
-            label="緊急訪問の求め"
-            :items="notApplicableFirstOptions"
-            item-title="title"
-            item-value="value"
-          />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select v-model="form.emergencyPhysicianInstruction" label="主治医の指示" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select v-model="form.emergencyType" label="緊急訪問の算定候補" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select v-model="form.dischargeJointGuidanceType" label="退院時共同指導（日別確認）" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select
-            v-model="form.dischargeSupportGuidanceCategory"
-            label="退院支援指導区分"
-            :items="dischargeSupportGuidanceOptions"
-            item-title="title"
-            item-value="value"
-          />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-text-field v-model.number="form.dischargeSupportTotalMinutes" label="退院支援指導時間（分）" type="number" min="0" step="5" />
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-select v-model="form.firstVisitAfterDischarge" label="退院後初回訪問" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
-        </v-col>
-      </v-row>
+      <v-expansion-panels class="mb-4" variant="accordion">
+        <v-expansion-panel>
+          <v-expansion-panel-title>
+            詳細な加算条件
+            <span class="text-body-2 text-medium-emphasis ml-3">必要な加算がある場合だけ開いて選択します。</span>
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <v-row>
+              <v-col cols="12" md="4">
+                <v-select
+                  v-model="form.timeVisitRequestedByPatientOrFamily"
+                  label="夜間等訪問の求め"
+                  :items="notApplicableFirstOptions"
+                  item-title="title"
+                  item-value="value"
+                />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select
+                  v-model="form.multipleVisitEligibilityType"
+                  label="難病等複数回訪問要件"
+                  :items="multipleVisitEligibilityOptions"
+                  item-title="title"
+                  item-value="value"
+                />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select
+                  v-model="form.multipleStaffCategory"
+                  label="複数名訪問区分"
+                  :items="multipleStaffCategoryOptions"
+                  item-title="title"
+                  item-value="value"
+                />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="form.singlePersonVisitDifficult" label="1人訪問が困難" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="form.multipleStaffConsent" label="複数名訪問の同意" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="form.simultaneousMultipleStaffVisit" label="同時訪問" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select
+                  v-model="form.longVisitEligibilityType"
+                  label="長時間訪問要件"
+                  :items="longVisitEligibilityOptions"
+                  item-title="title"
+                  item-value="value"
+                />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="form.longVisitType" label="長時間訪問の算定候補" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="form.emergencyUnplanned" label="定期予定外の緊急訪問" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select
+                  v-model="form.emergencyRequestedByPatientOrFamily"
+                  label="緊急訪問の求め"
+                  :items="notApplicableFirstOptions"
+                  item-title="title"
+                  item-value="value"
+                />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="form.emergencyPhysicianInstruction" label="主治医の指示" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="form.emergencyType" label="緊急訪問の算定候補" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="form.dischargeJointGuidanceType" label="退院時共同指導（日別確認）" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select
+                  v-model="form.dischargeSupportGuidanceCategory"
+                  label="退院支援指導区分"
+                  :items="dischargeSupportGuidanceOptions"
+                  item-title="title"
+                  item-value="value"
+                />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model.number="form.dischargeSupportTotalMinutes" label="退院支援指導時間（分）" type="number" min="0" step="5" />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="form.firstVisitAfterDischarge" label="退院後初回訪問" :items="notApplicableFirstOptions" item-title="title" item-value="value" />
+              </v-col>
+            </v-row>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
 
       <div class="section-panel mt-4 mb-4">
         <h3 class="text-subtitle-1 font-weight-bold mb-3">同じ内容を別日に使う</h3>

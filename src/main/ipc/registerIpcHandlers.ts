@@ -1,9 +1,22 @@
-import { ipcMain } from "electron";
-import type { DeleteDailyVisitPayload, DailyVisitInput, MonthlyEstimateInput, ResetEstimatePayload, SaveDailyVisitPayload, SaveDailyVisitsPayload } from "../../shared/types";
+import { BrowserWindow, ipcMain } from "electron";
+import type {
+  DeleteDailyVisitPayload,
+  DailyVisitInput,
+  MonthlyEstimateInput,
+  MonthlyReportExportPayload,
+  ResetEstimatePayload,
+  SaveDailyVisitPayload,
+  SaveDailyVisitsPayload
+} from "../../shared/types";
 import { MonthlyEstimateCalculator } from "../services/MonthlyEstimateCalculator";
 import type { EstimateRepository } from "../repositories/EstimateRepository";
+import { MonthlyReportExportService } from "../services/MonthlyReportExportService";
+import { CustomIconService } from "../services/CustomIconService";
 
-export function registerIpcHandlers(repository: EstimateRepository): void {
+export function registerIpcHandlers(repository: EstimateRepository, getMainWindow: () => BrowserWindow | null = () => null): void {
+  const reportExportService = new MonthlyReportExportService(repository, getMainWindow);
+  const customIconService = new CustomIconService();
+
   ipcMain.handle("hokan:getEstimate", async () => repository.getOrCreateCurrentEstimate());
 
   ipcMain.handle("hokan:saveEstimate", async (_event, payload: MonthlyEstimateInput) => {
@@ -68,6 +81,32 @@ export function registerIpcHandlers(repository: EstimateRepository): void {
       ruleCount: rules.length
     };
   });
+
+  ipcMain.handle("hokan:previewMonthlyReport", async (event, payload: MonthlyReportExportPayload) => {
+    validateMonthlyReportPayload(payload);
+    return reportExportService.preview(payload.monthlyEstimateId, BrowserWindow.fromWebContents(event.sender));
+  });
+
+  ipcMain.handle("hokan:printMonthlyReport", async (event, payload: MonthlyReportExportPayload) => {
+    validateMonthlyReportPayload(payload);
+    return reportExportService.print(payload.monthlyEstimateId, BrowserWindow.fromWebContents(event.sender));
+  });
+
+  ipcMain.handle("hokan:exportMonthlyReportPdf", async (event, payload: MonthlyReportExportPayload) => {
+    validateMonthlyReportPayload(payload);
+    return reportExportService.exportPdf(payload.monthlyEstimateId, BrowserWindow.fromWebContents(event.sender));
+  });
+
+  ipcMain.handle("hokan:exportMonthlyReportExcel", async (event, payload: MonthlyReportExportPayload) => {
+    validateMonthlyReportPayload(payload);
+    return reportExportService.exportExcel(payload.monthlyEstimateId, BrowserWindow.fromWebContents(event.sender));
+  });
+
+  ipcMain.handle("hokan:getIconPreference", async () => customIconService.getPreference());
+
+  ipcMain.handle("hokan:selectCustomIcon", async (event) => customIconService.selectCustomIcon(BrowserWindow.fromWebContents(event.sender)));
+
+  ipcMain.handle("hokan:resetCustomIcon", async () => customIconService.resetCustomIcon());
 }
 
 function validateEstimatePayload(payload: MonthlyEstimateInput): void {
@@ -91,5 +130,11 @@ function validateDailyVisitPayload(payload: DailyVisitInput): void {
   }
   if (!Array.isArray(payload.timeSlots) || payload.timeSlots.length !== payload.visitCount) {
     throw new Error("訪問回数分の時間入力が不足しています。");
+  }
+}
+
+function validateMonthlyReportPayload(payload: MonthlyReportExportPayload): void {
+  if (!payload || !Number.isInteger(payload.monthlyEstimateId)) {
+    throw new Error("出力対象が不正です。");
   }
 }

@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   DeleteDailyVisitPayload,
   HokanApi,
+  MonthlyReportExportPayload,
   MonthlyEstimateInput,
   ResetEstimatePayload,
   SaveDailyVisitPayload,
@@ -16,7 +17,14 @@ const api: HokanApi = {
   deleteDailyVisit: (payload: DeleteDailyVisitPayload) => ipcRenderer.invoke("hokan:deleteDailyVisit", payload),
   calculateMonthlyEstimate: (payload: { monthlyEstimateId: number }) => ipcRenderer.invoke("hokan:calculateMonthlyEstimate", payload),
   resetEstimate: (payload: ResetEstimatePayload) => ipcRenderer.invoke("hokan:resetEstimate", payload),
-  getPricingVersion: () => ipcRenderer.invoke("hokan:getPricingVersion")
+  getPricingVersion: () => ipcRenderer.invoke("hokan:getPricingVersion"),
+  previewMonthlyReport: (payload: MonthlyReportExportPayload) => ipcRenderer.invoke("hokan:previewMonthlyReport", payload),
+  printMonthlyReport: (payload: MonthlyReportExportPayload) => ipcRenderer.invoke("hokan:printMonthlyReport", payload),
+  exportMonthlyReportPdf: (payload: MonthlyReportExportPayload) => ipcRenderer.invoke("hokan:exportMonthlyReportPdf", payload),
+  exportMonthlyReportExcel: (payload: MonthlyReportExportPayload) => ipcRenderer.invoke("hokan:exportMonthlyReportExcel", payload),
+  getIconPreference: () => ipcRenderer.invoke("hokan:getIconPreference"),
+  selectCustomIcon: () => ipcRenderer.invoke("hokan:selectCustomIcon"),
+  resetCustomIcon: () => ipcRenderer.invoke("hokan:resetCustomIcon")
 };
 
 contextBridge.exposeInMainWorld("hokanApi", api);
