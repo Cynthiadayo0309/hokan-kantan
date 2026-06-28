@@ -5,6 +5,8 @@ type State = {
   estimate: MonthlyEstimate | null;
   calculation: MonthlyCalculationResult | null;
   pricingVersion: PricingVersion | null;
+  calculationStartDate: string;
+  calculationEndDate: string;
   loading: boolean;
   message: string;
   error: string;
@@ -15,6 +17,8 @@ export const useEstimateStore = defineStore("estimate", {
     estimate: null,
     calculation: null,
     pricingVersion: null,
+    calculationStartDate: "",
+    calculationEndDate: "",
     loading: false,
     message: "",
     error: ""
@@ -54,10 +58,19 @@ export const useEstimateStore = defineStore("estimate", {
       this.estimate = await window.hokanApi.deleteDailyVisit({ monthlyEstimateId, visitDate });
       this.message = `${Number(visitDate.slice(5, 7))}月${Number(visitDate.slice(8, 10))}日の訪問内容を削除しました。`;
     },
+    setCalculationPeriod(startDate: string, endDate: string): void {
+      this.calculationStartDate = startDate;
+      this.calculationEndDate = endDate;
+      this.calculation = null;
+    },
     async calculate(): Promise<MonthlyCalculationResult> {
       if (!this.estimate) throw new Error("入力データが見つかりません。");
       this.error = "";
-      this.calculation = await window.hokanApi.calculateMonthlyEstimate({ monthlyEstimateId: this.estimate.id });
+      this.calculation = await window.hokanApi.calculateMonthlyEstimate({
+        monthlyEstimateId: this.estimate.id,
+        startDate: this.calculationStartDate || undefined,
+        endDate: this.calculationEndDate || undefined
+      });
       return this.calculation;
     },
     async reset(): Promise<void> {

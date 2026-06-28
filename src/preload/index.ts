@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
+  CalculateMonthlyEstimatePayload,
   DeleteDailyVisitPayload,
   HokanApi,
   MonthlyReportExportPayload,
@@ -15,7 +16,7 @@ const api: HokanApi = {
   saveDailyVisit: (payload: SaveDailyVisitPayload) => ipcRenderer.invoke("hokan:saveDailyVisit", payload),
   saveDailyVisits: (payload: SaveDailyVisitsPayload) => ipcRenderer.invoke("hokan:saveDailyVisits", payload),
   deleteDailyVisit: (payload: DeleteDailyVisitPayload) => ipcRenderer.invoke("hokan:deleteDailyVisit", payload),
-  calculateMonthlyEstimate: (payload: { monthlyEstimateId: number }) => ipcRenderer.invoke("hokan:calculateMonthlyEstimate", payload),
+  calculateMonthlyEstimate: (payload: CalculateMonthlyEstimatePayload) => ipcRenderer.invoke("hokan:calculateMonthlyEstimate", payload),
   resetEstimate: (payload: ResetEstimatePayload) => ipcRenderer.invoke("hokan:resetEstimate", payload),
   getPricingVersion: () => ipcRenderer.invoke("hokan:getPricingVersion"),
   previewMonthlyReport: (payload: MonthlyReportExportPayload) => ipcRenderer.invoke("hokan:previewMonthlyReport", payload),

@@ -6,6 +6,9 @@
         <div class="app-subtitle">施設内訪問看護 月額費用シミュレーター</div>
       </v-app-bar-title>
       <div class="app-icon-actions">
+        <v-btn variant="text" color="white" prepend-icon="mdi-file-document-outline" @click="showLicenseNotice = true">
+          利用条件
+        </v-btn>
         <v-btn
           variant="text"
           color="white"
@@ -39,6 +42,7 @@
         <router-view />
       </div>
     </v-main>
+    <LicenseNoticeDialog v-model="showLicenseNotice" />
     <v-snackbar v-model="showIconMessage" color="primary" timeout="4500">{{ iconMessage }}</v-snackbar>
   </v-app>
 </template>
@@ -47,6 +51,7 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import type { IconPreference } from "../shared/types";
+import LicenseNoticeDialog from "./components/LicenseNoticeDialog.vue";
 import { useEstimateStore } from "./stores/estimateStore";
 
 const route = useRoute();
@@ -54,6 +59,7 @@ const store = useEstimateStore();
 const iconPreference = ref<IconPreference | null>(null);
 const iconLoading = ref<"" | "select" | "reset">("");
 const iconMessage = ref("");
+const showLicenseNotice = ref(false);
 const showIconMessage = computed({
   get: () => Boolean(iconMessage.value),
   set: (value: boolean) => {

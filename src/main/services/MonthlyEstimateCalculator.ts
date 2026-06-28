@@ -1,4 +1,15 @@
-import type { AdditionType, CalculationLine, DailyVisit, MonthlyCalculationResult, MonthlyEstimate, PricingCategory, PricingRule, UnitType } from "../../shared/types";
+import type {
+  AdditionType,
+  CalculationLine,
+  CalculationTotals,
+  DailyVisit,
+  MonthlyCalculationPeriodResult,
+  MonthlyCalculationResult,
+  MonthlyEstimate,
+  PricingCategory,
+  PricingRule,
+  UnitType
+} from "../../shared/types";
 import { labels } from "../../shared/types";
 import { calculateCopayment } from "./CopaymentCalculator";
 import { EligibilityEvaluator, professionCategoryFor } from "./EligibilityEvaluator";
@@ -9,13 +20,47 @@ import { countEligibleBeforeOrOn, monthlyVisitDayOrdinal, weeklyEligibleOrdinal,
 export class MonthlyEstimateCalculator {
   constructor(private readonly rules: PricingRule[]) {}
 
-  calculate(estimate: MonthlyEstimate): MonthlyCalculationResult {
+  calculate(estimate: MonthlyEstimate, period?: { startDate?: string; endDate?: string }): MonthlyCalculationResult {
+    const defaultStart = `${estimate.targetMonth}-01`;
+    const defaultEnd = endOfMonth(estimate.targetMonth);
+    const periodStartDate = period?.startDate ?? defaultStart;
+    const periodEndDate = period?.endDate ?? defaultEnd;
+    const months = monthsBetween(periodStartDate, periodEndDate);
+
+    if (months.length <= 1) {
+      const targetMonth = months[0] ?? estimate.targetMonth;
+      return this.calculateSingleMonth(cloneEstimateForMonth(estimate, targetMonth, periodStartDate, periodEndDate), periodStartDate, periodEndDate);
+    }
+
+    const monthlyResults = months.map((targetMonth) => {
+      const monthStart = targetMonth === months[0] ? periodStartDate : `${targetMonth}-01`;
+      const monthEnd = targetMonth === months[months.length - 1] ? periodEndDate : endOfMonth(targetMonth);
+      return this.calculateSingleMonth(cloneEstimateForMonth(estimate, targetMonth, monthStart, monthEnd), monthStart, monthEnd);
+    });
+    const rangeTotal = sumTotals(monthlyResults.map((result) => result.totals));
+
+    return {
+      periodStartDate,
+      periodEndDate,
+      targetMonth: estimate.targetMonth,
+      lines: monthlyResults.flatMap((result) => result.lines),
+      totals: rangeTotal,
+      warnings: Array.from(new Set(monthlyResults.flatMap((result) => result.warnings))),
+      usesSamplePricing: monthlyResults.some((result) => result.usesSamplePricing),
+      monthlyResults,
+      rangeTotal
+    };
+  }
+
+  private calculateSingleMonth(estimate: MonthlyEstimate, periodStartDate: string, periodEndDate: string): MonthlyCalculationPeriodResult {
     const resolver = new PricingRuleResolver(this.rules);
     const lines: CalculationLine[] = [];
     const warnings: string[] = [];
     const formalRules = this.rules.filter((rule) => rule.enabled && !rule.samplePrice);
     const usesSamplePricing = formalRules.length === 0 && this.rules.some((rule) => rule.enabled && rule.samplePrice);
-    const visits = [...estimate.dailyVisits].sort((a, b) => a.visitDate.localeCompare(b.visitDate));
+    const visits = [...estimate.dailyVisits]
+      .filter((visit) => visit.visitDate >= periodStartDate && visit.visitDate <= periodEndDate && visit.visitDate.startsWith(`${estimate.targetMonth}-`))
+      .sort((a, b) => a.visitDate.localeCompare(b.visitDate));
 
     for (const visit of visits) {
       if (visit.basicFeeApplicable === "applicable") {
@@ -50,6 +95,9 @@ export class MonthlyEstimateCalculator {
     }
 
     return {
+      periodStartDate,
+      periodEndDate,
+      targetMonth: estimate.targetMonth,
       lines: merged,
       totals: {
         basic,
@@ -507,4 +555,56 @@ export class MonthlyEstimateCalculator {
 
 function normalizeSameBuildingForFormal(value: MonthlyEstimate["sameBuildingCategory"]): MonthlyEstimate["sameBuildingCategory"] | "one_to_two" {
   return value;
+}
+
+function cloneEstimateForMonth(estimate: MonthlyEstimate, targetMonth: string, startDate: string, endDate: string): MonthlyEstimate {
+  return {
+    ...estimate,
+    targetMonth,
+    dailyVisits: estimate.dailyVisits.filter((visit) => visit.visitDate >= startDate && visit.visitDate <= endDate && visit.visitDate.startsWith(`${targetMonth}-`))
+  };
+}
+
+function endOfMonth(targetMonth: string): string {
+  const [year, month] = targetMonth.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${targetMonth}-${String(lastDay).padStart(2, "0")}`;
+}
+
+function monthKeyFromDate(date: string): string {
+  return date.slice(0, 7);
+}
+
+function nextMonth(targetMonth: string): string {
+  const [year, month] = targetMonth.split("-").map(Number);
+  const next = new Date(year, month, 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthsBetween(startDate: string, endDate: string): string[] {
+  const months: string[] = [];
+  let cursor = monthKeyFromDate(startDate);
+  const end = monthKeyFromDate(endDate);
+  while (cursor <= end) {
+    months.push(cursor);
+    cursor = nextMonth(cursor);
+  }
+  return months;
+}
+
+function sumTotals(totals: CalculationTotals[]): CalculationTotals {
+  const copaymentValues = totals.map((total) => total.copaymentAmount).filter((value): value is number => value !== undefined);
+  const copaymentBeforeLimitValues = totals.map((total) => total.copaymentAmountBeforeLimit).filter((value): value is number => value !== undefined);
+  const highCostLimitValues = totals.map((total) => total.highCostCareLimitAmount).filter((value): value is number => value !== undefined);
+  return {
+    basic: totals.reduce((sum, total) => sum + total.basic, 0),
+    management: totals.reduce((sum, total) => sum + total.management, 0),
+    additions: totals.reduce((sum, total) => sum + total.additions, 0),
+    grandTotal: totals.reduce((sum, total) => sum + total.grandTotal, 0),
+    copaymentAmountBeforeLimit:
+      copaymentBeforeLimitValues.length > 0 ? copaymentBeforeLimitValues.reduce((sum, value) => sum + value, 0) : undefined,
+    copaymentAmount: copaymentValues.length > 0 ? copaymentValues.reduce((sum, value) => sum + value, 0) : undefined,
+    highCostCareLimitAmount: highCostLimitValues.length > 0 ? highCostLimitValues.reduce((sum, value) => sum + value, 0) : undefined,
+    highCostCareLimitApplied: totals.some((total) => total.highCostCareLimitApplied)
+  };
 }

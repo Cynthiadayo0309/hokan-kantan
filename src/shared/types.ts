@@ -159,9 +159,7 @@ export type CalculationLine = {
   note?: string;
 };
 
-export type MonthlyCalculationResult = {
-  lines: CalculationLine[];
-  totals: {
+export type CalculationTotals = {
     basic: number;
     management: number;
     additions: number;
@@ -170,9 +168,30 @@ export type MonthlyCalculationResult = {
     copaymentAmount?: number;
     highCostCareLimitAmount?: number;
     highCostCareLimitApplied?: boolean;
-  };
+};
+
+export type MonthlyCalculationResult = {
+  periodStartDate?: string;
+  periodEndDate?: string;
+  targetMonth?: string;
+  lines: CalculationLine[];
+  totals: CalculationTotals;
   warnings: string[];
   usesSamplePricing: boolean;
+  monthlyResults?: MonthlyCalculationPeriodResult[];
+  rangeTotal?: CalculationTotals;
+};
+
+export type MonthlyCalculationPeriodResult = Omit<MonthlyCalculationResult, "monthlyResults" | "rangeTotal"> & {
+  periodStartDate: string;
+  periodEndDate: string;
+  targetMonth: string;
+};
+
+export type CalculateMonthlyEstimatePayload = {
+  monthlyEstimateId: number;
+  startDate?: string;
+  endDate?: string;
 };
 
 export type PricingRule = {
@@ -277,7 +296,7 @@ export type HokanApi = {
   saveDailyVisit: (payload: SaveDailyVisitPayload) => Promise<DailyVisit>;
   saveDailyVisits: (payload: SaveDailyVisitsPayload) => Promise<MonthlyEstimate>;
   deleteDailyVisit: (payload: DeleteDailyVisitPayload) => Promise<MonthlyEstimate>;
-  calculateMonthlyEstimate: (payload: { monthlyEstimateId: number }) => Promise<MonthlyCalculationResult>;
+  calculateMonthlyEstimate: (payload: CalculateMonthlyEstimatePayload) => Promise<MonthlyCalculationResult>;
   resetEstimate: (payload: ResetEstimatePayload) => Promise<MonthlyEstimate>;
   getPricingVersion: () => Promise<PricingVersion>;
   previewMonthlyReport: (payload: MonthlyReportExportPayload) => Promise<void>;

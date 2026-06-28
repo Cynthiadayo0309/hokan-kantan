@@ -1,5 +1,6 @@
 import { BrowserWindow, ipcMain } from "electron";
 import type {
+  CalculateMonthlyEstimatePayload,
   DeleteDailyVisitPayload,
   DailyVisitInput,
   MonthlyEstimateInput,
@@ -54,16 +55,17 @@ export function registerIpcHandlers(repository: EstimateRepository, getMainWindo
     return repository.deleteDailyVisit(payload.monthlyEstimateId, payload.visitDate);
   });
 
-  ipcMain.handle("hokan:calculateMonthlyEstimate", async (_event, payload: { monthlyEstimateId: number }) => {
+  ipcMain.handle("hokan:calculateMonthlyEstimate", async (_event, payload: CalculateMonthlyEstimatePayload) => {
     if (!Number.isInteger(payload.monthlyEstimateId)) {
       throw new Error("入力データが不正です。");
     }
+    validateCalculationPeriodPayload(payload);
     const estimate = repository.getEstimate(payload.monthlyEstimateId);
     if (!estimate.patientName.trim()) {
       throw new Error("利用者名を入力してください。");
     }
     const calculator = new MonthlyEstimateCalculator(repository.getPricingRules());
-    return calculator.calculate(estimate);
+    return calculator.calculate(estimate, { startDate: payload.startDate, endDate: payload.endDate });
   });
 
   ipcMain.handle("hokan:resetEstimate", async (_event, payload: ResetEstimatePayload) => {
@@ -130,6 +132,15 @@ function validateDailyVisitPayload(payload: DailyVisitInput): void {
   }
   if (!Array.isArray(payload.timeSlots) || payload.timeSlots.length !== payload.visitCount) {
     throw new Error("訪問回数分の時間入力が不足しています。");
+  }
+}
+
+function validateCalculationPeriodPayload(payload: CalculateMonthlyEstimatePayload): void {
+  if ((payload.startDate && !/^\d{4}-\d{2}-\d{2}$/.test(payload.startDate)) || (payload.endDate && !/^\d{4}-\d{2}-\d{2}$/.test(payload.endDate))) {
+    throw new Error("計算対象期間が不正です。");
+  }
+  if (payload.startDate && payload.endDate && payload.endDate < payload.startDate) {
+    throw new Error("計算対象期間の終了日は開始日以降の日付を選択してください。");
   }
 }
 

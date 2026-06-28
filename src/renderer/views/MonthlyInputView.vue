@@ -12,7 +12,7 @@
           <v-text-field v-model="form.facilityName" label="施設名" @blur="saveHeader" />
         </v-col>
         <v-col cols="12" md="2">
-          <v-text-field v-model="form.targetMonth" label="対象年月（必須）" type="month" @update:model-value="saveHeader" />
+          <v-text-field v-model="form.targetMonth" label="対象年月（必須）" type="month" @update:model-value="onTargetMonthChanged" />
         </v-col>
         <v-col cols="12" md="2">
           <v-select
@@ -112,6 +112,18 @@
         </v-expansion-panel>
       </v-expansion-panels>
 
+      <v-row class="mt-2">
+        <v-col cols="12" md="3">
+          <v-text-field v-model="calculationStartDate" label="計算開始日" type="date" />
+        </v-col>
+        <v-col cols="12" md="3">
+          <v-text-field v-model="calculationEndDate" label="計算終了日" type="date" />
+        </v-col>
+        <v-col cols="12" md="6" class="d-flex align-center">
+          <div class="text-body-2 text-medium-emphasis">月をまたぐ場合は、月別の明細と選択範囲合計を表示します。</div>
+        </v-col>
+      </v-row>
+
       <v-alert v-if="form.sameBuildingCategory === 'one'" type="warning" variant="tonal" density="comfortable" class="mt-2">
         1人区分は入力できますが、今回の正式対応範囲は基本療養費（Ⅱ）のみです。基本療養費（Ⅰ）が必要な場合は明細に警告し、合計には含めません。
       </v-alert>
@@ -210,6 +222,9 @@ const router = useRouter();
 const store = useEstimateStore();
 const dialog = ref(false);
 const selectedDate = ref("");
+const calculationStartDate = ref("");
+const calculationEndDate = ref("");
+const defaultCalculationMonth = ref("");
 
 const form = reactive({
   id: 0,
@@ -248,6 +263,7 @@ watch(
       specialManagementGuidanceApplicable: estimate.specialManagementGuidanceApplicable,
       highCostCareLimitCategory: estimate.highCostCareLimitCategory
     });
+    setDefaultCalculationPeriod(estimate.targetMonth);
   },
   { immediate: true }
 );
@@ -266,6 +282,11 @@ const showMessage = computed({
 async function saveHeader(): Promise<void> {
   if (!form.targetMonth) return;
   await store.saveEstimate({ ...form });
+}
+
+async function onTargetMonthChanged(): Promise<void> {
+  setDefaultCalculationPeriod(form.targetMonth, true);
+  await saveHeader();
 }
 
 async function openDay(day: Date): Promise<void> {
@@ -306,7 +327,16 @@ async function calculate(): Promise<void> {
       store.error = "利用者名を入力してください。";
       return;
     }
+    if (!isValidDateKey(calculationStartDate.value) || !isValidDateKey(calculationEndDate.value)) {
+      store.error = "計算開始日と計算終了日を選択してください。";
+      return;
+    }
+    if (calculationEndDate.value < calculationStartDate.value) {
+      store.error = "計算終了日は計算開始日以降の日付を選択してください。";
+      return;
+    }
     await saveHeader();
+    store.setCalculationPeriod(calculationStartDate.value, calculationEndDate.value);
     await store.calculate();
     await router.push({ name: "cost-detail" });
   } catch (error) {
@@ -339,5 +369,28 @@ function summaryFor(dateKey: string): string {
     visit.longVisitEligibilityType !== "none" ||
     visit.dischargeSupportGuidanceCategory !== "none";
   return `${profession}${count}\n${starts}\n${zones}${hasAddition ? "\n加算あり" : ""}`;
+}
+
+function setDefaultCalculationPeriod(targetMonth: string, force = false): void {
+  if (!targetMonth) return;
+  const currentIsPreviousDefault =
+    defaultCalculationMonth.value &&
+    calculationStartDate.value === `${defaultCalculationMonth.value}-01` &&
+    calculationEndDate.value === endOfMonth(defaultCalculationMonth.value);
+  if (force || !calculationStartDate.value || !calculationEndDate.value || currentIsPreviousDefault) {
+    calculationStartDate.value = `${targetMonth}-01`;
+    calculationEndDate.value = endOfMonth(targetMonth);
+  }
+  defaultCalculationMonth.value = targetMonth;
+}
+
+function endOfMonth(targetMonth: string): string {
+  const [year, month] = targetMonth.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${targetMonth}-${String(lastDay).padStart(2, "0")}`;
+}
+
+function isValidDateKey(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 </script>

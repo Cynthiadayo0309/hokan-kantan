@@ -267,6 +267,29 @@ describe("MonthlyEstimateCalculator formal pricing", () => {
 
     expect(result.warnings.some((warning) => warning.includes("高額療養費制度の見直し予定"))).toBe(true);
   });
+
+  it("calculates cross-month periods by month and totals the selected range", () => {
+    const result = new MonthlyEstimateCalculator(rules).calculate(
+      estimate({
+        dailyVisits: [
+          visit({ visitDate: "2026-06-14", managementFeeApplicable: "applicable" }),
+          visit({ visitDate: "2026-06-15", managementFeeApplicable: "applicable" }),
+          visit({ visitDate: "2026-07-01", managementFeeApplicable: "applicable" }),
+          visit({ visitDate: "2026-07-16", managementFeeApplicable: "applicable" })
+        ]
+      }),
+      { startDate: "2026-06-15", endDate: "2026-07-15" }
+    );
+
+    expect(result.monthlyResults).toHaveLength(2);
+    expect(result.monthlyResults?.[0].targetMonth).toBe("2026-06");
+    expect(result.monthlyResults?.[1].targetMonth).toBe("2026-07");
+    expect(result.monthlyResults?.[0].lines.flatMap((line) => line.targetDates)).toContain("2026-06-15");
+    expect(result.monthlyResults?.[0].lines.flatMap((line) => line.targetDates)).not.toContain("2026-06-14");
+    expect(result.monthlyResults?.[1].lines.flatMap((line) => line.targetDates)).toContain("2026-07-01");
+    expect(result.monthlyResults?.[1].lines.flatMap((line) => line.targetDates)).not.toContain("2026-07-16");
+    expect(result.totals.grandTotal).toBe(result.monthlyResults!.reduce((sum, month) => sum + month.totals.grandTotal, 0));
+  });
 });
 
 function calculate(estimateValue: MonthlyEstimate) {

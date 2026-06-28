@@ -160,16 +160,16 @@
         <h3 class="text-subtitle-1 font-weight-bold mb-3">同じ内容を別日に使う</h3>
         <v-row>
           <v-col cols="12" md="4">
-            <v-text-field v-model="copyTargetDate" label="複写先日付" type="date" :min="monthStartDate" :max="monthEndDate" />
+            <v-text-field v-model="copyTargetDate" label="複写先日付" type="date" :min="allowedStartDate" :max="allowedEndDate" />
           </v-col>
           <v-col cols="12" md="8" class="d-flex align-center">
             <v-btn variant="outlined" prepend-icon="mdi-content-copy" @click="copyToDate">この内容を指定日に複写</v-btn>
           </v-col>
           <v-col cols="12" md="4">
-            <v-text-field v-model="rangeStartDate" label="範囲の開始日" type="date" :min="monthStartDate" :max="monthEndDate" />
+            <v-text-field v-model="rangeStartDate" label="範囲の開始日" type="date" :min="allowedStartDate" :max="allowedEndDate" />
           </v-col>
           <v-col cols="12" md="4">
-            <v-text-field v-model="rangeEndDate" label="範囲の終了日" type="date" :min="monthStartDate" :max="monthEndDate" />
+            <v-text-field v-model="rangeEndDate" label="範囲の終了日" type="date" :min="allowedStartDate" :max="allowedEndDate" />
           </v-col>
           <v-col cols="12" md="4" class="d-flex align-center">
             <v-btn variant="outlined" prepend-icon="mdi-calendar-range" @click="copyToRange">この内容を範囲に反映</v-btn>
@@ -240,11 +240,15 @@ const endDayOptions = [
   { value: "next_day", title: "翌日" }
 ];
 const displayDate = computed(() => `${Number(props.visitDate.slice(5, 7))}月${Number(props.visitDate.slice(8, 10))}日`);
-const monthStartDate = computed(() => `${props.targetMonth}-01`);
-const monthEndDate = computed(() => {
+const allowedStartDate = computed(() => {
   const [year, month] = props.targetMonth.split("-").map(Number);
-  const lastDay = new Date(year, month, 0).getDate();
-  return `${props.targetMonth}-${String(lastDay).padStart(2, "0")}`;
+  const date = new Date(year, month - 2, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+});
+const allowedEndDate = computed(() => {
+  const [year, month] = props.targetMonth.split("-").map(Number);
+  const date = new Date(year, month + 1, 0);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 });
 
 watch(
@@ -343,7 +347,7 @@ function copyToDate(): void {
     return;
   }
   if (!isDateInTargetMonth(copyTargetDate.value)) {
-    error.value = "複写先日付は対象年月の範囲内で選択してください。";
+    error.value = "複写先日付は対象年月の前月から翌月までの範囲で選択してください。";
     return;
   }
   const payload = buildSavableVisit(copyTargetDate.value);
@@ -359,7 +363,7 @@ function copyToRange(): void {
     return;
   }
   if (!isDateInTargetMonth(rangeStartDate.value) || !isDateInTargetMonth(rangeEndDate.value)) {
-    error.value = "範囲は対象年月の中で選択してください。";
+    error.value = "範囲は対象年月の前月から翌月までで選択してください。";
     return;
   }
   if (rangeEndDate.value < rangeStartDate.value) {
@@ -394,7 +398,7 @@ function confirmOverwrite(targetDates: string[]): boolean {
 }
 
 function isDateInTargetMonth(value: string): boolean {
-  return value >= monthStartDate.value && value <= monthEndDate.value;
+  return value >= allowedStartDate.value && value <= allowedEndDate.value;
 }
 
 function datesBetween(startDate: string, endDate: string): string[] {
