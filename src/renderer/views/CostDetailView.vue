@@ -59,7 +59,20 @@
       </div>
 
       <div class="detail-table-wrap">
-        <table class="detail-table">
+        <table :class="['detail-table', showLineWarning ? 'has-warning-column' : '']">
+          <colgroup>
+            <col class="col-category">
+            <col class="col-service">
+            <col class="col-condition">
+            <col class="col-dates">
+            <col class="col-quantity">
+            <col class="col-unit">
+            <col class="col-price">
+            <col class="col-subtotal">
+            <col class="col-evidence">
+            <col v-if="showLineWarning" class="col-warning">
+            <col class="col-note">
+          </colgroup>
           <thead>
             <tr>
               <th>区分</th>
@@ -71,26 +84,28 @@
               <th>単価</th>
               <th>金額</th>
               <th>算定根拠</th>
-              <th>警告</th>
+              <th v-if="showLineWarning">警告</th>
               <th>備考</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="!calculation?.lines.length">
-              <td colspan="11">明細がありません。</td>
+              <td :colspan="showLineWarning ? 11 : 10">明細がありません。</td>
             </tr>
             <tr v-for="line in calculation?.lines" :key="`${line.category}-${line.serviceName}-${line.targetDates.join(',')}`" :class="{ excluded: line.includedInTotal === false }">
-              <td>{{ categoryLabel(line.category) }}</td>
-              <td>{{ line.serviceName }}</td>
-              <td>{{ line.conditionSummary }}</td>
-              <td>{{ line.targetDates.map(formatShortDate).join("、") }}</td>
+              <td class="category-cell"><span :class="['category-badge', `category-${line.category}`]">{{ categoryLabel(line.category) }}</span></td>
+              <td class="service-cell">{{ line.serviceName }}</td>
+              <td class="condition-cell">{{ line.conditionSummary }}</td>
+              <td class="date-cell">
+                <span v-for="date in line.targetDates" :key="date" class="date-pill">{{ formatShortDate(date) }}</span>
+              </td>
               <td class="amount">{{ line.quantity }}</td>
-              <td>{{ line.unitType ? labels.unitType[line.unitType] : "" }}</td>
+              <td class="unit-cell">{{ line.unitType ? labels.unitType[line.unitType] : "" }}</td>
               <td class="amount">{{ yen(line.unitPrice) }}</td>
               <td class="amount">{{ yen(line.subtotal) }}</td>
-              <td>{{ line.evidence || "" }}</td>
-              <td class="warning-cell">{{ line.warning || (line.includedInTotal === false ? "合計対象外" : "") }}</td>
-              <td>{{ line.note || "" }}</td>
+              <td class="text-cell">{{ line.evidence || "" }}</td>
+              <td v-if="showLineWarning" class="warning-cell">{{ warningFor(line) }}</td>
+              <td class="text-cell">{{ line.note || "" }}</td>
             </tr>
           </tbody>
         </table>
@@ -154,6 +169,7 @@ import { formatMonth } from "../utils/date";
 const router = useRouter();
 const store = useEstimateStore();
 const calculation = computed(() => store.calculation);
+const showLineWarning = computed(() => Boolean(calculation.value?.lines.some((line) => warningFor(line))));
 const outputLoading = ref<"" | "preview" | "print" | "pdf" | "excel">("");
 const outputMessage = ref("");
 const showOutputMessage = computed({
@@ -234,6 +250,10 @@ function yen(value: number): string {
 
 function formatShortDate(value: string): string {
   return `${Number(value.slice(5, 7))}/${Number(value.slice(8, 10))}`;
+}
+
+function warningFor(line: { warning?: string; includedInTotal?: boolean }): string {
+  return line.warning || (line.includedInTotal === false ? "合計対象外" : "");
 }
 </script>
 

@@ -201,6 +201,7 @@ import {
   timeOptions
 } from "../utils/options";
 import { toSavableDailyVisitInput } from "../utils/dailyVisitInput";
+import { dateKeysBetween } from "../utils/date";
 import { previewTime } from "../utils/timePreview";
 
 const props = defineProps<{
@@ -397,14 +398,7 @@ function isDateInTargetMonth(value: string): boolean {
 }
 
 function datesBetween(startDate: string, endDate: string): string[] {
-  const dates: string[] = [];
-  const current = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate}T00:00:00`);
-  while (current <= end) {
-    dates.push(current.toISOString().slice(0, 10));
-    current.setDate(current.getDate() + 1);
-  }
-  return dates;
+  return dateKeysBetween(startDate, endDate);
 }
 
 function deleteVisit(): void {

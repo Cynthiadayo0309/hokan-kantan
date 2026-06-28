@@ -11,9 +11,8 @@
     "types": ["node", "electron"],
     "rootDir": "src",
     "outDir": "dist-electron",
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"]
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": ["src/main/**/*.ts", "src/preload/**/*.ts", "src/shared/**/*.ts"]

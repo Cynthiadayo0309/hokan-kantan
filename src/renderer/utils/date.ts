@@ -33,6 +33,17 @@ export function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+export function dateKeysBetween(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  while (current <= end) {
+    dates.push(toDateKey(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+}
+
 export function formatMonth(targetMonth: string): string {
   const [year, month] = targetMonth.split("-");
   return `${year}年${Number(month)}月`;

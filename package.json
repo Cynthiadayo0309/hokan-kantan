@@ -1,6 +1,6 @@
 {
   "name": "hokan-kantan",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "訪看かんたん計算 - 施設内訪問看護 月額費用シミュレーター",
   "main": "dist-electron/main/main.js",
   "author": "hokan-kantan",
@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dist": "npm run build && electron-builder --win nsis"
+    "release:manifest": "node scripts/create-release-manifest.mjs",
+    "dist": "npm run build && electron-builder --win nsis && npm run release:manifest"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",

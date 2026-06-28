@@ -72,6 +72,12 @@ body {
   background: #ffffff;
 }
 
+.detail-table-wrap {
+  max-height: 64vh;
+  border-color: #365b56;
+  background: #f8fbfa;
+}
+
 .monthly-grid {
   display: grid;
   grid-template-columns: 210px repeat(var(--day-count), 88px);
@@ -268,22 +274,179 @@ body {
 
 .detail-table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 1480px;
   border-collapse: collapse;
   background: #ffffff;
+  table-layout: fixed;
+}
+
+.detail-table .col-category {
+  width: 82px;
+}
+
+.detail-table .col-service {
+  width: 190px;
+}
+
+.detail-table .col-condition {
+  width: 112px;
+}
+
+.detail-table .col-dates {
+  width: 458px;
+}
+
+.detail-table .col-quantity {
+  width: 84px;
+}
+
+.detail-table .col-unit {
+  width: 104px;
+}
+
+.detail-table .col-price {
+  width: 96px;
+}
+
+.detail-table .col-subtotal {
+  width: 104px;
+}
+
+.detail-table .col-evidence {
+  width: 240px;
+}
+
+.detail-table .col-warning {
+  width: 150px;
+}
+
+.detail-table .col-note {
+  width: 200px;
+}
+
+.detail-table.has-warning-column {
+  min-width: 1630px;
 }
 
 .detail-table th,
 .detail-table td {
-  padding: 10px;
-  border: 1px solid #60736f;
+  padding: 14px 12px;
+  border: 1px solid #829792;
   vertical-align: top;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .detail-table th {
-  background: #eef7f4;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 2px solid #365b56;
+  background: #e8f3f0;
   color: #143f3a;
+  font-weight: 800;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.detail-table tbody tr:nth-child(even):not(.excluded) {
+  background: #fbfdfc;
+}
+
+.detail-table tbody tr:hover {
+  background: #f0f8f5;
+}
+
+.detail-table tbody tr {
+  min-height: 72px;
+}
+
+.detail-table .category-cell,
+.detail-table .condition-cell,
+.detail-table .unit-cell {
+  color: #244c47;
   font-weight: 700;
+}
+
+.detail-table .category-cell,
+.detail-table .amount,
+.detail-table .unit-cell {
+  text-align: center;
+}
+
+.detail-table .service-cell {
+  color: #183b37;
+  font-weight: 700;
+}
+
+.detail-table .text-cell {
+  color: #334f4a;
+}
+
+.category-badge {
+  display: inline-flex;
+  min-width: 58px;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.category-basic {
+  border-color: #b8d8d2;
+  background: #e8f6f2;
+  color: #124c45;
+}
+
+.category-management {
+  border-color: #bed3e1;
+  background: #e8f2f8;
+  color: #214963;
+}
+
+.category-addition {
+  border-color: #c9dcb8;
+  background: #eef7e8;
+  color: #375729;
+}
+
+.detail-table .unit-cell {
+  white-space: nowrap;
+}
+
+.detail-table .amount {
+  padding-right: 12px;
+  text-align: right;
+}
+
+.detail-table .date-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 6px;
+  align-content: flex-start;
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
+.date-pill {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 26px;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border: 1px solid #b9d2ce;
+  border-radius: 4px;
+  background: #f6fcfa;
+  color: #173d38;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .totals-grid {
