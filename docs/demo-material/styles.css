@@ -1,0 +1,298 @@
+@page {
+  size: A4;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: #173d38;
+  background: #eef5f2;
+  font-family: "Yu Gothic UI", "Meiryo", "Segoe UI", sans-serif;
+}
+
+.deck {
+  width: 210mm;
+  margin: 0 auto;
+  background: #ffffff;
+}
+
+.page {
+  position: relative;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 20mm 18mm 16mm;
+  overflow: hidden;
+  page-break-after: always;
+  background:
+    linear-gradient(180deg, rgba(229, 243, 239, 0.82), rgba(255, 255, 255, 0) 46mm),
+    #ffffff;
+}
+
+.page::after {
+  position: absolute;
+  right: 18mm;
+  bottom: 9mm;
+  color: #6e8782;
+  font-size: 8.5pt;
+  content: "訪看かんたん計算 | 本資料は概算ツールの紹介用です";
+}
+
+.cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background:
+    linear-gradient(145deg, rgba(21, 106, 98, 0.95), rgba(24, 81, 74, 0.92)),
+    #156a62;
+  color: #ffffff;
+}
+
+.cover::after {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.cover-label,
+.kicker {
+  color: #246d65;
+  font-size: 10pt;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.cover-label {
+  color: #cce7e2;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 6mm;
+  font-size: 36pt;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin-bottom: 7mm;
+  color: #123d38;
+  font-size: 22pt;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.cover h1,
+.cover h2 {
+  color: #ffffff;
+}
+
+h3 {
+  margin-bottom: 3mm;
+  color: #164f49;
+  font-size: 13pt;
+  line-height: 1.45;
+}
+
+.subtitle {
+  margin-bottom: 16mm;
+  color: #d9f2ee;
+  font-size: 17pt;
+  font-weight: 700;
+}
+
+.lead {
+  max-width: 154mm;
+  margin-bottom: 14mm;
+  font-size: 14pt;
+  line-height: 1.9;
+}
+
+.body-copy {
+  margin-bottom: 7mm;
+  font-size: 11.5pt;
+  line-height: 1.75;
+}
+
+.cover-points,
+.flow,
+.cards {
+  display: grid;
+  gap: 5mm;
+}
+
+.cover-points {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 18mm;
+}
+
+.cover-points div {
+  min-height: 27mm;
+  padding: 6mm;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 3mm;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 12pt;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.disclaimer {
+  width: 100%;
+  padding: 5mm 6mm;
+  border: 1px solid rgba(255, 255, 255, 0.44);
+  border-radius: 2mm;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 11pt;
+  font-weight: 700;
+}
+
+.two-column {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8mm;
+  align-items: start;
+}
+
+.two-column.compact {
+  margin-top: 5mm;
+  gap: 4mm;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding-left: 1.4em;
+}
+
+li {
+  margin-bottom: 3mm;
+  font-size: 11pt;
+  line-height: 1.65;
+}
+
+.note-box,
+.warning-box,
+.cards article {
+  border: 1px solid #bdd6d1;
+  border-radius: 3mm;
+  background: #f7fbfa;
+}
+
+.note-box {
+  padding: 7mm;
+}
+
+.note-box p,
+.warning-box p,
+.cards p {
+  margin-bottom: 0;
+  font-size: 10.8pt;
+  line-height: 1.75;
+}
+
+.wide {
+  margin-top: 8mm;
+}
+
+.flow {
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 16mm;
+}
+
+.flow div {
+  min-height: 34mm;
+  padding: 7mm;
+  border-radius: 3mm;
+  background: #e4f2ef;
+  color: #173d38;
+  font-size: 13pt;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.flow span {
+  display: inline-flex;
+  width: 10mm;
+  height: 10mm;
+  align-items: center;
+  justify-content: center;
+  margin-right: 3mm;
+  border-radius: 50%;
+  background: #176a62;
+  color: #ffffff;
+}
+
+.screenshot-frame {
+  margin: 0 0 6mm;
+  padding: 3mm;
+  border: 1px solid #b7cec9;
+  border-radius: 3mm;
+  background: #f8fbfa;
+}
+
+.screenshot-frame img {
+  display: block;
+  width: 100%;
+  max-height: 155mm;
+  object-fit: contain;
+  border: 1px solid #d8e6e3;
+  border-radius: 2mm;
+  background: #ffffff;
+}
+
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4mm;
+  padding-left: 0;
+  list-style: none;
+}
+
+.feature-list li {
+  min-height: 24mm;
+  margin: 0;
+  padding: 4mm;
+  border-radius: 2mm;
+  background: #eef7f4;
+  font-size: 10pt;
+  font-weight: 700;
+}
+
+.cards {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.cards article {
+  min-height: 38mm;
+  padding: 6mm;
+}
+
+.warning-box {
+  margin-top: 12mm;
+  padding: 7mm;
+  border-color: #e1bb78;
+  background: #fff8e9;
+}
+
+.warning-box h3 {
+  color: #745200;
+}
+
+@media screen {
+  body {
+    padding: 18px;
+  }
+
+  .page {
+    margin-bottom: 18px;
+    box-shadow: 0 10px 30px rgba(23, 61, 56, 0.16);
+  }
+}
