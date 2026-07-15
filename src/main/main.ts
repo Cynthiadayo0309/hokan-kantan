@@ -3,6 +3,7 @@ import path from "node:path";
 import { DatabaseManager } from "./database/DatabaseManager";
 import { registerIpcHandlers } from "./ipc/registerIpcHandlers";
 import { EstimateRepository } from "./repositories/EstimateRepository";
+import { CareEstimateRepository } from "./repositories/CareEstimateRepository";
 import { getCustomIconPathIfExists } from "./services/CustomIconService";
 
 let mainWindow: BrowserWindow | null = null;
@@ -37,7 +38,7 @@ app.whenReady().then(() => {
   app.setName("訪看かんたん計算");
   const databaseManager = new DatabaseManager();
   const db = databaseManager.initialize();
-  registerIpcHandlers(new EstimateRepository(db), () => mainWindow);
+  registerIpcHandlers(new EstimateRepository(db), new CareEstimateRepository(db), () => mainWindow);
   createWindow();
 
   app.on("activate", () => {

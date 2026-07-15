@@ -4,7 +4,7 @@
 
 - Electron main: DB、マイグレーション、料金マスター、検証、費用計算、IPCを担当する。
 - preload: `window.hokanApi` のみを公開する。
-- renderer: Vue/Vuetifyで2画面と日別入力ダイアログを表示する。
+- renderer: Vue/Vuetifyで保険選択画面と、医療・介護それぞれの月間入力・費用明細・日別入力ダイアログを表示する。
 - SQLite: `app.getPath("userData")/application.db` に保存する。
 
 ## セキュリティ
@@ -23,6 +23,15 @@ BrowserWindowは `contextIsolation: true`, `nodeIntegration: false`, `sandbox: t
 - `resetEstimate(payload)`
 - `getPricingVersion()`
 
+既存医療IPCは変更せず、介護専用として次を追加する。
+
+- `getCareEstimate()` / `saveCareEstimate(payload)`
+- `saveCareDay(payload)` / `deleteCareDay(payload)`
+- `calculateCareMonthlyEstimate(payload)` / `resetCareEstimate(payload)`
+- `getCarePricingVersion()`
+- `previewCareMonthlyReport(payload)` / `printCareMonthlyReport(payload)`
+- `exportCareMonthlyReportPdf(payload)` / `exportCareMonthlyReportExcel(payload)`
+
 mainプロセス側で入力値を検証し、DB保存と計算を行う。
 
 ## 計算サービス
@@ -37,3 +46,13 @@ mainプロセス側で入力値を検証し、DB保存と計算を行う。
 - `MonthlyEstimateCalculator`: 明細、小計、総額、自己負担額を生成する。
 
 正式単価は推測しない。2026-06-01適用開始の正式料金は `resources/pricing/formal-pricing.json` から登録し、既存サンプル料金は削除せず無効化する。今回の正式対応範囲外である訪問看護基本療養費（Ⅰ）は、警告を表示して合計に含めない。
+
+## 介護保険データと計算
+
+既存医療データを変更せず、`care_monthly_estimates`、`care_service_entries`、`care_pricing_rules`、`care_regional_rates` に分離する。マイグレーション `004_care_insurance` は再実行可能とし、未適用DBでは実行前に `application.db.<日時>.bak` を作成する。
+
+- `CareDailyServiceCalculator`: 訪問時間、時間区分、端数、同日重複を検証する。
+- `CarePricingRuleResolver`: 対象日・要介護/要支援・職種・時間区分から正式単位を解決する。
+- `CareMonthlyEstimateCalculator`: 基本単位、加減算、処遇改善、地域単価、自己負担を計算する。
+
+加減算は単位段階で整数化し、月間合計単位に地域単価を乗じて1円未満を切り捨てる。利用者負担額は「総費用－保険給付額（切り捨て）」で算出する。介護料金は `resources/pricing/care-pricing.json` に適用日、単位、算定区分、公式資料名・URLを保持する。

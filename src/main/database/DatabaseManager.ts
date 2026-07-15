@@ -6,6 +6,7 @@ import path from "node:path";
 const INITIAL_MIGRATION_ID = "001_initial_schema";
 const FORMAL_PRICING_MIGRATION_ID = "002_formal_pricing";
 const HIGH_COST_CARE_LIMIT_MIGRATION_ID = "003_high_cost_care_limit";
+const CARE_INSURANCE_MIGRATION_ID = "004_care_insurance";
 
 export class DatabaseManager {
   private db?: Database.Database;
@@ -28,7 +29,10 @@ export class DatabaseManager {
 
     this.ensureMigrationTable();
     const hasPendingMigration =
-      !this.hasMigration(INITIAL_MIGRATION_ID) || !this.hasMigration(FORMAL_PRICING_MIGRATION_ID) || !this.hasMigration(HIGH_COST_CARE_LIMIT_MIGRATION_ID);
+      !this.hasMigration(INITIAL_MIGRATION_ID) ||
+      !this.hasMigration(FORMAL_PRICING_MIGRATION_ID) ||
+      !this.hasMigration(HIGH_COST_CARE_LIMIT_MIGRATION_ID) ||
+      !this.hasMigration(CARE_INSURANCE_MIGRATION_ID);
     if (existed && hasPendingMigration) {
       this.backupDatabase(dbPath);
     }
@@ -36,8 +40,10 @@ export class DatabaseManager {
     this.runInitialMigration();
     this.runFormalPricingMigration();
     this.runHighCostCareLimitMigration();
+    this.runCareInsuranceMigration();
     this.seedSamplePricingRules();
     this.seedFormalPricingRules();
+    this.seedCarePricingRules();
     return this.db;
   }
 
@@ -255,6 +261,88 @@ export class DatabaseManager {
     migrate();
   }
 
+  private runCareInsuranceMigration(): void {
+    if (this.hasMigration(CARE_INSURANCE_MIGRATION_ID)) {
+      return;
+    }
+
+    const migrate = this.connection.transaction(() => {
+      this.connection.exec(`
+        CREATE TABLE IF NOT EXISTS care_monthly_estimates (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          patient_name TEXT NOT NULL DEFAULT '',
+          facility_name TEXT NOT NULL DEFAULT '',
+          target_month TEXT NOT NULL,
+          care_classification TEXT NOT NULL DEFAULT 'care',
+          copayment_rate TEXT NOT NULL DEFAULT 'unset',
+          regional_grade TEXT NOT NULL DEFAULT 'other',
+          same_building_category TEXT NOT NULL DEFAULT 'none',
+          initial_addition TEXT NOT NULL DEFAULT 'none',
+          emergency_addition TEXT NOT NULL DEFAULT 'none',
+          special_management_addition TEXT NOT NULL DEFAULT 'none',
+          discharge_joint_guidance INTEGER NOT NULL DEFAULT 0,
+          terminal_care INTEGER NOT NULL DEFAULT 0,
+          treatment_improvement INTEGER NOT NULL DEFAULT 0,
+          rehab_over_12_months INTEGER NOT NULL DEFAULT 0,
+          rehab_facility_reduction INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS care_service_entries (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          care_monthly_estimate_id INTEGER NOT NULL,
+          visit_date TEXT NOT NULL,
+          sequence INTEGER NOT NULL,
+          profession TEXT NOT NULL,
+          start_time TEXT NOT NULL,
+          end_time TEXT NOT NULL,
+          end_day_type TEXT NOT NULL,
+          unplanned_emergency INTEGER NOT NULL DEFAULT 0,
+          duration_minutes INTEGER NOT NULL,
+          service_category TEXT NOT NULL,
+          time_zone_type TEXT NOT NULL,
+          time_zone_breakdown_json TEXT NOT NULL DEFAULT '[]',
+          warnings_json TEXT NOT NULL DEFAULT '[]',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY(care_monthly_estimate_id) REFERENCES care_monthly_estimates(id) ON DELETE CASCADE,
+          UNIQUE(care_monthly_estimate_id, visit_date, sequence)
+        );
+
+        CREATE TABLE IF NOT EXISTS care_pricing_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT NOT NULL UNIQUE,
+          name TEXT NOT NULL,
+          category TEXT NOT NULL,
+          effective_from TEXT NOT NULL,
+          effective_to TEXT,
+          care_classification TEXT,
+          profession_category TEXT,
+          service_category TEXT,
+          unit_count INTEGER NOT NULL,
+          percentage REAL,
+          source_note TEXT NOT NULL,
+          enabled INTEGER NOT NULL DEFAULT 1
+        );
+
+        CREATE TABLE IF NOT EXISTS care_regional_rates (
+          grade TEXT PRIMARY KEY,
+          unit_price REAL NOT NULL,
+          effective_from TEXT NOT NULL,
+          effective_to TEXT,
+          source_note TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_care_services_estimate_date
+          ON care_service_entries(care_monthly_estimate_id, visit_date);
+      `);
+      this.markMigrationApplied(CARE_INSURANCE_MIGRATION_ID);
+    });
+
+    migrate();
+  }
+
   private seedSamplePricingRules(): void {
     const count = this.connection.prepare("SELECT COUNT(*) as count FROM pricing_rules").get() as { count: number };
     if (count.count > 0) {
@@ -296,6 +384,60 @@ export class DatabaseManager {
       this.seedEligibilityRules();
     });
 
+    transaction();
+  }
+
+  private seedCarePricingRules(): void {
+    const pricingPath = this.resolvePricingPath("care-pricing.json");
+    const pricing = JSON.parse(readFileSync(pricingPath, "utf-8")) as {
+      source: string;
+      defaultRuleSourceId?: string;
+      regionalRateSourceId?: string;
+      sources?: Array<{ id: string; name: string; url: string }>;
+      regionalRates: Array<{ grade: string; unitPrice: number }>;
+      rules: Array<Record<string, string | number | null>>;
+    };
+    const sources = new Map((pricing.sources ?? []).map((source) => [source.id, `${source.name} ${source.url}`]));
+    const defaultRuleSource = sources.get(pricing.defaultRuleSourceId ?? "") ?? pricing.source;
+    const regionalRateSource = sources.get(pricing.regionalRateSourceId ?? "") ?? pricing.source;
+    const upsertRule = this.connection.prepare(`
+      INSERT INTO care_pricing_rules (
+        code, name, category, effective_from, effective_to, care_classification,
+        profession_category, service_category, unit_count, percentage, source_note, enabled
+      ) VALUES (@code, @name, @category, @effectiveFrom, @effectiveTo, @careClassification,
+        @professionCategory, @serviceCategory, @unitCount, @percentage, @sourceNote, 1)
+      ON CONFLICT(code) DO UPDATE SET
+        name = excluded.name, category = excluded.category, effective_from = excluded.effective_from,
+        effective_to = excluded.effective_to, care_classification = excluded.care_classification,
+        profession_category = excluded.profession_category, service_category = excluded.service_category,
+        unit_count = excluded.unit_count, percentage = excluded.percentage,
+        source_note = excluded.source_note, enabled = 1
+    `);
+    const upsertRate = this.connection.prepare(`
+      INSERT INTO care_regional_rates (grade, unit_price, effective_from, effective_to, source_note)
+      VALUES (?, ?, '2024-04-01', NULL, ?)
+      ON CONFLICT(grade) DO UPDATE SET unit_price = excluded.unit_price, source_note = excluded.source_note
+    `);
+    const transaction = this.connection.transaction(() => {
+      for (const rule of pricing.rules) {
+        upsertRule.run({
+          code: rule.code,
+          name: rule.name,
+          category: rule.category,
+          effectiveFrom: rule.effectiveFrom,
+          effectiveTo: rule.effectiveTo ?? null,
+          careClassification: rule.careClassification ?? "any",
+          professionCategory: rule.professionCategory ?? "any",
+          serviceCategory: rule.serviceCategory ?? "any",
+          unitCount: rule.unitCount,
+          percentage: rule.percentage ?? null,
+          sourceNote: sources.get(String(rule.sourceId ?? "")) ?? defaultRuleSource
+        });
+      }
+      for (const rate of pricing.regionalRates) {
+        upsertRate.run(rate.grade, rate.unitPrice, regionalRateSource);
+      }
+    });
     transaction();
   }
 

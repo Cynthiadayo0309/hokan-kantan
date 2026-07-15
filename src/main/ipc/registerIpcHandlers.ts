@@ -13,9 +13,18 @@ import { MonthlyEstimateCalculator } from "../services/MonthlyEstimateCalculator
 import type { EstimateRepository } from "../repositories/EstimateRepository";
 import { MonthlyReportExportService } from "../services/MonthlyReportExportService";
 import { CustomIconService } from "../services/CustomIconService";
+import type { CareEstimateRepository } from "../repositories/CareEstimateRepository";
+import { CareMonthlyEstimateCalculator } from "../services/CareMonthlyEstimateCalculator";
+import { CareMonthlyReportExportService } from "../services/CareMonthlyReportExportService";
+import { carePricingVersion } from "../services/CarePricingRuleResolver";
 
-export function registerIpcHandlers(repository: EstimateRepository, getMainWindow: () => BrowserWindow | null = () => null): void {
+export function registerIpcHandlers(
+  repository: EstimateRepository,
+  careRepository: CareEstimateRepository,
+  getMainWindow: () => BrowserWindow | null = () => null
+): void {
   const reportExportService = new MonthlyReportExportService(repository, getMainWindow);
+  const careReportExportService = new CareMonthlyReportExportService(careRepository, getMainWindow);
   const customIconService = new CustomIconService();
 
   ipcMain.handle("hokan:getEstimate", async () => repository.getOrCreateCurrentEstimate());
@@ -109,6 +118,61 @@ export function registerIpcHandlers(repository: EstimateRepository, getMainWindo
   ipcMain.handle("hokan:selectCustomIcon", async (event) => customIconService.selectCustomIcon(BrowserWindow.fromWebContents(event.sender)));
 
   ipcMain.handle("hokan:resetCustomIcon", async () => customIconService.resetCustomIcon());
+
+  ipcMain.handle("hokan:getCareEstimate", async () => careRepository.getOrCreateCurrentEstimate());
+
+  ipcMain.handle("hokan:saveCareEstimate", async (_event, payload) => {
+    validateCareEstimatePayload(payload);
+    return careRepository.saveEstimate(payload);
+  });
+
+  ipcMain.handle("hokan:saveCareDay", async (_event, payload) => {
+    if (!payload || !Number.isInteger(payload.careEstimateId) || !/^\d{4}-\d{2}-\d{2}$/.test(payload.visitDate) || !Array.isArray(payload.services)) {
+      throw new Error("介護保険の訪問内容が不正です。");
+    }
+    return careRepository.saveDay(payload.careEstimateId, payload.visitDate, payload.services);
+  });
+
+  ipcMain.handle("hokan:deleteCareDay", async (_event, payload) => {
+    if (!payload || !Number.isInteger(payload.careEstimateId) || !/^\d{4}-\d{2}-\d{2}$/.test(payload.visitDate)) {
+      throw new Error("削除対象が不正です。");
+    }
+    return careRepository.deleteDay(payload.careEstimateId, payload.visitDate);
+  });
+
+  ipcMain.handle("hokan:calculateCareMonthlyEstimate", async (_event, payload) => {
+    if (!payload || !Number.isInteger(payload.careEstimateId)) throw new Error("入力データが不正です。");
+    const estimate = careRepository.getEstimate(payload.careEstimateId);
+    const rate = careRepository.getRegionalRate(estimate.regionalGrade, `${estimate.targetMonth}-01`);
+    return new CareMonthlyEstimateCalculator(careRepository.getPricingRules()).calculate(estimate, rate);
+  });
+
+  ipcMain.handle("hokan:resetCareEstimate", async (_event, payload) => {
+    if (!payload || !Number.isInteger(payload.careEstimateId)) throw new Error("入力データが不正です。");
+    return careRepository.resetEstimate(payload.careEstimateId);
+  });
+
+  ipcMain.handle("hokan:getCarePricingVersion", async () => {
+    const estimate = careRepository.getOrCreateCurrentEstimate();
+    return carePricingVersion(estimate.targetMonth, careRepository.getPricingRules().length);
+  });
+
+  ipcMain.handle("hokan:previewCareMonthlyReport", async (event, payload) => {
+    validateCareReportPayload(payload);
+    return careReportExportService.preview(payload.careEstimateId, BrowserWindow.fromWebContents(event.sender));
+  });
+  ipcMain.handle("hokan:printCareMonthlyReport", async (event, payload) => {
+    validateCareReportPayload(payload);
+    return careReportExportService.print(payload.careEstimateId, BrowserWindow.fromWebContents(event.sender));
+  });
+  ipcMain.handle("hokan:exportCareMonthlyReportPdf", async (event, payload) => {
+    validateCareReportPayload(payload);
+    return careReportExportService.exportPdf(payload.careEstimateId, BrowserWindow.fromWebContents(event.sender));
+  });
+  ipcMain.handle("hokan:exportCareMonthlyReportExcel", async (event, payload) => {
+    validateCareReportPayload(payload);
+    return careReportExportService.exportExcel(payload.careEstimateId, BrowserWindow.fromWebContents(event.sender));
+  });
 }
 
 function validateEstimatePayload(payload: MonthlyEstimateInput): void {
@@ -148,4 +212,19 @@ function validateMonthlyReportPayload(payload: MonthlyReportExportPayload): void
   if (!payload || !Number.isInteger(payload.monthlyEstimateId)) {
     throw new Error("出力対象が不正です。");
   }
+}
+
+function validateCareEstimatePayload(payload: any): void {
+  if (!payload || typeof payload !== "object" || !/^\d{4}-\d{2}$/.test(payload.targetMonth)) {
+    throw new Error("介護保険の入力内容が不正です。");
+  }
+  if (!['care', 'support'].includes(payload.careClassification)) throw new Error("認定区分を選択してください。");
+  if (!['unset', '10', '20', '30'].includes(payload.copaymentRate)) throw new Error("自己負担割合が不正です。");
+  if (payload.initialAddition !== 'none' && payload.dischargeJointGuidance) {
+    throw new Error("初回加算と退院時共同指導加算は同時に選択できません。");
+  }
+}
+
+function validateCareReportPayload(payload: any): void {
+  if (!payload || !Number.isInteger(payload.careEstimateId)) throw new Error("出力対象が不正です。");
 }

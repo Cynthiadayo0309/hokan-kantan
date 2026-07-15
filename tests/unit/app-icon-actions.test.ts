@@ -5,7 +5,8 @@ import App from "../../src/renderer/App.vue";
 import LicenseNoticeDialog from "../../src/renderer/components/LicenseNoticeDialog.vue";
 
 vi.mock("vue-router", () => ({
-  useRoute: () => ({ name: "monthly-input" })
+  useRoute: () => ({ name: "monthly-input", meta: { insurance: "medical" } }),
+  useRouter: () => ({ push: vi.fn() })
 }));
 
 describe("App icon actions", () => {

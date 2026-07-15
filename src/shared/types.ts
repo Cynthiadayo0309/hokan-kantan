@@ -128,6 +128,8 @@ export type MonthlyEstimate = {
   updatedAt: string;
 };
 
+export type MedicalEstimate = MonthlyEstimate;
+
 export type MonthlyEstimateInput = {
   id?: number;
   patientName: string;
@@ -171,6 +173,7 @@ export type CalculationTotals = {
 };
 
 export type MonthlyCalculationResult = {
+  insuranceType: "medical";
   periodStartDate?: string;
   periodEndDate?: string;
   targetMonth?: string;
@@ -290,6 +293,149 @@ export type PricingVersion = {
   ruleCount: number;
 };
 
+export type InsuranceType = "medical" | "care";
+export type CareClassification = "care" | "support";
+export type CareRegionalGrade = "grade_1" | "grade_2" | "grade_3" | "grade_4" | "grade_5" | "grade_6" | "grade_7" | "other";
+export type CareSameBuildingCategory = "none" | "same_adjacent_under_50" | "same_adjacent_50_plus" | "other_building_20_plus";
+export type CareInitialAddition = "none" | "type_1" | "type_2";
+export type CareEmergencyAddition = "none" | "type_1" | "type_2";
+export type CareSpecialManagementAddition = "none" | "type_1" | "type_2";
+export type CareProfession =
+  | "public_health_nurse"
+  | "nurse"
+  | "assistant_nurse"
+  | "physical_therapist"
+  | "occupational_therapist"
+  | "speech_therapist";
+export type CareServiceCategory = "under_20" | "under_30" | "under_60" | "under_90" | "long" | "rehab";
+export type CareLineCategory = "basic" | "addition" | "deduction";
+
+export type CareServiceEntryInput = {
+  id?: number;
+  sequence: number;
+  profession: CareProfession;
+  startTime: string;
+  endTime: string;
+  endDayType: EndDayType;
+  unplannedEmergency: boolean;
+};
+
+export type CareServiceEntry = CareServiceEntryInput & {
+  id: number;
+  durationMinutes: number;
+  serviceCategory: CareServiceCategory;
+  timeZoneType: TimeZoneType;
+  timeZoneBreakdown: TimeZoneBreakdown[];
+  warnings: string[];
+};
+
+export type CareServiceDay = {
+  visitDate: string;
+  services: CareServiceEntry[];
+};
+
+export type CareEstimateInput = {
+  id?: number;
+  patientName: string;
+  facilityName: string;
+  targetMonth: string;
+  careClassification: CareClassification;
+  copaymentRate: CopaymentRate;
+  regionalGrade: CareRegionalGrade;
+  sameBuildingCategory: CareSameBuildingCategory;
+  initialAddition: CareInitialAddition;
+  emergencyAddition: CareEmergencyAddition;
+  specialManagementAddition: CareSpecialManagementAddition;
+  dischargeJointGuidance: boolean;
+  terminalCare: boolean;
+  treatmentImprovement: boolean;
+  rehabOver12Months: boolean;
+  rehabFacilityReduction: boolean;
+};
+
+export type CareEstimate = Omit<CareEstimateInput, "id"> & {
+  id: number;
+  serviceDays: CareServiceDay[];
+  updatedAt: string;
+};
+
+export type SaveCareDayPayload = {
+  careEstimateId: number;
+  visitDate: string;
+  services: CareServiceEntryInput[];
+};
+
+export type DeleteCareDayPayload = {
+  careEstimateId: number;
+  visitDate: string;
+};
+
+export type CalculateCareEstimatePayload = {
+  careEstimateId: number;
+};
+
+export type ResetCareEstimatePayload = {
+  careEstimateId: number;
+};
+
+export type CarePricingRule = {
+  id: number;
+  code: string;
+  name: string;
+  category: CareLineCategory;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  careClassification?: CareClassification | "any" | null;
+  professionCategory?: "nurse" | "rehab" | "any" | null;
+  serviceCategory?: CareServiceCategory | "any" | null;
+  unitCount: number;
+  percentage?: number | null;
+  sourceNote: string;
+};
+
+export type CareCalculationLine = {
+  category: CareLineCategory;
+  serviceName: string;
+  conditionSummary: string;
+  targetDates: string[];
+  quantity: number;
+  unitCount: number;
+  subtotalUnits: number;
+  regionalUnitPrice: number;
+  amount: number;
+  includedInTotal: boolean;
+  evidence?: string;
+  warning?: string;
+  note?: string;
+};
+
+export type CareCalculationResult = {
+  insuranceType: "care";
+  targetMonth: string;
+  lines: CareCalculationLine[];
+  totals: {
+    basicUnits: number;
+    additionUnits: number;
+    deductionUnits: number;
+    totalUnits: number;
+    regionalUnitPrice: number;
+    grandTotal: number;
+    copaymentAmount?: number;
+  };
+  warnings: string[];
+  usesSamplePricing: false;
+};
+
+export type InsuranceEstimate =
+  | { insuranceType: "medical"; estimate: MedicalEstimate }
+  | { insuranceType: "care"; estimate: CareEstimate };
+
+export type InsuranceCalculationResult = MonthlyCalculationResult | CareCalculationResult;
+
+export type CareReportExportPayload = {
+  careEstimateId: number;
+};
+
 export type HokanApi = {
   getEstimate: () => Promise<MonthlyEstimate>;
   saveEstimate: (payload: MonthlyEstimateInput) => Promise<MonthlyEstimate>;
@@ -306,6 +452,17 @@ export type HokanApi = {
   getIconPreference: () => Promise<IconPreference>;
   selectCustomIcon: () => Promise<IconOperationResult>;
   resetCustomIcon: () => Promise<IconOperationResult>;
+  getCareEstimate: () => Promise<CareEstimate>;
+  saveCareEstimate: (payload: CareEstimateInput) => Promise<CareEstimate>;
+  saveCareDay: (payload: SaveCareDayPayload) => Promise<CareEstimate>;
+  deleteCareDay: (payload: DeleteCareDayPayload) => Promise<CareEstimate>;
+  calculateCareMonthlyEstimate: (payload: CalculateCareEstimatePayload) => Promise<CareCalculationResult>;
+  resetCareEstimate: (payload: ResetCareEstimatePayload) => Promise<CareEstimate>;
+  getCarePricingVersion: () => Promise<PricingVersion>;
+  previewCareMonthlyReport: (payload: CareReportExportPayload) => Promise<void>;
+  printCareMonthlyReport: (payload: CareReportExportPayload) => Promise<MonthlyReportExportResult>;
+  exportCareMonthlyReportPdf: (payload: CareReportExportPayload) => Promise<MonthlyReportExportResult>;
+  exportCareMonthlyReportExcel: (payload: CareReportExportPayload) => Promise<MonthlyReportExportResult>;
 };
 
 export const labels = {

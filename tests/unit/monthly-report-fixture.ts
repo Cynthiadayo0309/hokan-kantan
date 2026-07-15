@@ -31,6 +31,7 @@ export function createEstimate(): MonthlyEstimate {
 
 export function createCalculation(): MonthlyCalculationResult {
   return {
+    insuranceType: "medical",
     lines: [
       {
         category: "basic",

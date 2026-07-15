@@ -25,7 +25,18 @@ const api: HokanApi = {
   exportMonthlyReportExcel: (payload: MonthlyReportExportPayload) => ipcRenderer.invoke("hokan:exportMonthlyReportExcel", payload),
   getIconPreference: () => ipcRenderer.invoke("hokan:getIconPreference"),
   selectCustomIcon: () => ipcRenderer.invoke("hokan:selectCustomIcon"),
-  resetCustomIcon: () => ipcRenderer.invoke("hokan:resetCustomIcon")
+  resetCustomIcon: () => ipcRenderer.invoke("hokan:resetCustomIcon"),
+  getCareEstimate: () => ipcRenderer.invoke("hokan:getCareEstimate"),
+  saveCareEstimate: (payload) => ipcRenderer.invoke("hokan:saveCareEstimate", payload),
+  saveCareDay: (payload) => ipcRenderer.invoke("hokan:saveCareDay", payload),
+  deleteCareDay: (payload) => ipcRenderer.invoke("hokan:deleteCareDay", payload),
+  calculateCareMonthlyEstimate: (payload) => ipcRenderer.invoke("hokan:calculateCareMonthlyEstimate", payload),
+  resetCareEstimate: (payload) => ipcRenderer.invoke("hokan:resetCareEstimate", payload),
+  getCarePricingVersion: () => ipcRenderer.invoke("hokan:getCarePricingVersion"),
+  previewCareMonthlyReport: (payload) => ipcRenderer.invoke("hokan:previewCareMonthlyReport", payload),
+  printCareMonthlyReport: (payload) => ipcRenderer.invoke("hokan:printCareMonthlyReport", payload),
+  exportCareMonthlyReportPdf: (payload) => ipcRenderer.invoke("hokan:exportCareMonthlyReportPdf", payload),
+  exportCareMonthlyReportExcel: (payload) => ipcRenderer.invoke("hokan:exportCareMonthlyReportExcel", payload)
 };
 
 contextBridge.exposeInMainWorld("hokanApi", api);

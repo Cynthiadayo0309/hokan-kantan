@@ -1,0 +1,55 @@
+{
+  "version": "令和6年度介護報酬改定・令和8年6月期中改定",
+  "source": "厚生労働省 令和6年度・令和8年度介護報酬改定",
+  "defaultRuleSourceId": "r6_care_fee_revision",
+  "regionalRateSourceId": "regional_grade",
+  "sources": [
+    {
+      "id": "r6_care_fee_revision",
+      "name": "厚生労働省 令和6年度介護報酬改定（訪問看護）",
+      "url": "https://www.mhlw.go.jp/content/12300000/001230329.pdf?v=20260606062004"
+    },
+    {
+      "id": "r8_treatment_improvement",
+      "name": "厚生労働省 令和8年度介護報酬改定（介護職員等処遇改善加算）",
+      "url": "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000188411_00073.html"
+    },
+    {
+      "id": "regional_grade",
+      "name": "厚生労働省 地域区分・1単位の単価",
+      "url": "https://www.mhlw.go.jp/content/12300000/001489165.pdf"
+    }
+  ],
+  "regionalRates": [
+    { "grade": "grade_1", "unitPrice": 11.4 },
+    { "grade": "grade_2", "unitPrice": 11.12 },
+    { "grade": "grade_3", "unitPrice": 11.05 },
+    { "grade": "grade_4", "unitPrice": 10.84 },
+    { "grade": "grade_5", "unitPrice": 10.7 },
+    { "grade": "grade_6", "unitPrice": 10.42 },
+    { "grade": "grade_7", "unitPrice": 10.21 },
+    { "grade": "other", "unitPrice": 10.0 }
+  ],
+  "rules": [
+    { "code": "CARE_NURSE_UNDER_20", "name": "訪問看護費（20分未満）", "category": "basic", "careClassification": "care", "professionCategory": "nurse", "serviceCategory": "under_20", "unitCount": 314, "effectiveFrom": "2024-06-01" },
+    { "code": "CARE_NURSE_UNDER_30", "name": "訪問看護費（30分未満）", "category": "basic", "careClassification": "care", "professionCategory": "nurse", "serviceCategory": "under_30", "unitCount": 471, "effectiveFrom": "2024-06-01" },
+    { "code": "CARE_NURSE_UNDER_60", "name": "訪問看護費（30分以上1時間未満）", "category": "basic", "careClassification": "care", "professionCategory": "nurse", "serviceCategory": "under_60", "unitCount": 823, "effectiveFrom": "2024-06-01" },
+    { "code": "CARE_NURSE_UNDER_90", "name": "訪問看護費（1時間以上1時間30分未満）", "category": "basic", "careClassification": "care", "professionCategory": "nurse", "serviceCategory": "under_90", "unitCount": 1128, "effectiveFrom": "2024-06-01" },
+    { "code": "SUPPORT_NURSE_UNDER_20", "name": "介護予防訪問看護費（20分未満）", "category": "basic", "careClassification": "support", "professionCategory": "nurse", "serviceCategory": "under_20", "unitCount": 303, "effectiveFrom": "2024-06-01" },
+    { "code": "SUPPORT_NURSE_UNDER_30", "name": "介護予防訪問看護費（30分未満）", "category": "basic", "careClassification": "support", "professionCategory": "nurse", "serviceCategory": "under_30", "unitCount": 451, "effectiveFrom": "2024-06-01" },
+    { "code": "SUPPORT_NURSE_UNDER_60", "name": "介護予防訪問看護費（30分以上1時間未満）", "category": "basic", "careClassification": "support", "professionCategory": "nurse", "serviceCategory": "under_60", "unitCount": 794, "effectiveFrom": "2024-06-01" },
+    { "code": "SUPPORT_NURSE_UNDER_90", "name": "介護予防訪問看護費（1時間以上1時間30分未満）", "category": "basic", "careClassification": "support", "professionCategory": "nurse", "serviceCategory": "under_90", "unitCount": 1090, "effectiveFrom": "2024-06-01" },
+    { "code": "CARE_REHAB", "name": "理学療法士等による訪問看護", "category": "basic", "careClassification": "care", "professionCategory": "rehab", "serviceCategory": "rehab", "unitCount": 294, "effectiveFrom": "2024-06-01" },
+    { "code": "SUPPORT_REHAB", "name": "理学療法士等による介護予防訪問看護", "category": "basic", "careClassification": "support", "professionCategory": "rehab", "serviceCategory": "rehab", "unitCount": 284, "effectiveFrom": "2024-06-01" },
+    { "code": "LONG_VISIT", "name": "長時間訪問看護加算", "category": "addition", "careClassification": "any", "professionCategory": "nurse", "serviceCategory": "long", "unitCount": 300, "effectiveFrom": "2024-06-01" },
+    { "code": "INITIAL_1", "name": "初回加算（Ⅰ）", "category": "addition", "unitCount": 350, "effectiveFrom": "2024-06-01" },
+    { "code": "INITIAL_2", "name": "初回加算（Ⅱ）", "category": "addition", "unitCount": 300, "effectiveFrom": "2024-06-01" },
+    { "code": "EMERGENCY_1", "name": "緊急時訪問看護加算（Ⅰ）", "category": "addition", "unitCount": 600, "effectiveFrom": "2024-06-01" },
+    { "code": "EMERGENCY_2", "name": "緊急時訪問看護加算（Ⅱ）", "category": "addition", "unitCount": 574, "effectiveFrom": "2024-06-01" },
+    { "code": "SPECIAL_MANAGEMENT_1", "name": "特別管理加算（Ⅰ）", "category": "addition", "unitCount": 500, "effectiveFrom": "2024-06-01" },
+    { "code": "SPECIAL_MANAGEMENT_2", "name": "特別管理加算（Ⅱ）", "category": "addition", "unitCount": 250, "effectiveFrom": "2024-06-01" },
+    { "code": "DISCHARGE_JOINT", "name": "退院時共同指導加算", "category": "addition", "unitCount": 600, "effectiveFrom": "2024-06-01" },
+    { "code": "TERMINAL_CARE", "name": "ターミナルケア加算", "category": "addition", "unitCount": 2500, "effectiveFrom": "2024-06-01" },
+    { "code": "TREATMENT_IMPROVEMENT", "name": "介護職員等処遇改善加算", "category": "addition", "unitCount": 0, "percentage": 1.8, "effectiveFrom": "2026-06-01", "sourceId": "r8_treatment_improvement" }
+  ]
+}

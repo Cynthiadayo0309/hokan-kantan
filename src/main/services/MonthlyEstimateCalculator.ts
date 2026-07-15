@@ -40,6 +40,7 @@ export class MonthlyEstimateCalculator {
     const rangeTotal = sumTotals(monthlyResults.map((result) => result.totals));
 
     return {
+      insuranceType: "medical",
       periodStartDate,
       periodEndDate,
       targetMonth: estimate.targetMonth,
@@ -95,6 +96,7 @@ export class MonthlyEstimateCalculator {
     }
 
     return {
+      insuranceType: "medical",
       periodStartDate,
       periodEndDate,
       targetMonth: estimate.targetMonth,
