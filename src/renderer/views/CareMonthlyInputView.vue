@@ -61,7 +61,16 @@
     <v-alert type="warning" variant="tonal" class="mt-4">未対応：区分支給限度基準額、他サービス、高額介護サービス費、公費、複数名訪問、看護体制強化、サービス提供体制強化、特別地域・中山間地域加算等。</v-alert>
   </template>
 
-  <CareDailyServiceDialog v-model="dialogOpen" :visit-date="selectedDate" :services="selectedServices" @save="saveDay" @delete="deleteDay" />
+  <CareDailyServiceDialog
+    v-model="dialogOpen"
+    :visit-date="selectedDate"
+    :target-month="form.targetMonth"
+    :existing-visit-dates="existingVisitDates"
+    :services="selectedServices"
+    @save="saveDay"
+    @copy="copyDays"
+    @delete="deleteDay"
+  />
   <v-dialog v-model="confirmReset" max-width="460"><v-card><v-card-title>すべての訪問内容を削除しますか？</v-card-title><v-card-text>基本情報は残し、登録した日別サービスをすべて削除します。</v-card-text><v-card-actions><v-spacer /><v-btn variant="text" @click="confirmReset=false">キャンセル</v-btn><v-btn color="error" @click="reset">すべて削除</v-btn></v-card-actions></v-card></v-dialog>
   <v-snackbar v-model="showMessage" color="primary" timeout="4000">{{ store.message }}</v-snackbar>
 </template>
@@ -78,6 +87,7 @@ import { careClassificationOptions,careCopaymentOptions,regionalGradeOptions,sam
 const router=useRouter();const store=useCareEstimateStore();const dialogOpen=ref(false);const selectedDate=ref("");const selectedServices=ref<CareServiceEntry[]>([]);const confirmReset=ref(false);
 const form=reactive<CareEstimateInput>({patientName:"",facilityName:"",targetMonth:"",careClassification:"care",copaymentRate:"unset",regionalGrade:"other",sameBuildingCategory:"none",initialAddition:"none",emergencyAddition:"none",specialManagementAddition:"none",dischargeJointGuidance:false,terminalCare:false,treatmentImprovement:false,rehabOver12Months:false,rehabFacilityReduction:false});
 const weekdayLabels=["日","月","火","水","木","金","土"];const calendarWeeks=computed(()=>form.targetMonth?calendarWeeksInMonth(form.targetMonth):[]);const dayMap=computed(()=>new Map((store.estimate?.serviceDays||[]).filter(day=>day.visitDate.startsWith(`${form.targetMonth}-`)).map(day=>[day.visitDate,day])));
+const existingVisitDates=computed(()=>(store.estimate?.serviceDays||[]).map(day=>day.visitDate));
 const showMessage=computed({get:()=>Boolean(store.message),set:value=>{if(!value)store.message=""}});
 onMounted(async()=>{await store.load();if(store.estimate)Object.assign(form,headerFromEstimate(store.estimate))});
 function headerFromEstimate(value:NonNullable<typeof store.estimate>):CareEstimateInput{return{id:value.id,patientName:value.patientName,facilityName:value.facilityName,targetMonth:value.targetMonth,careClassification:value.careClassification,copaymentRate:value.copaymentRate,regionalGrade:value.regionalGrade,sameBuildingCategory:value.sameBuildingCategory,initialAddition:value.initialAddition,emergencyAddition:value.emergencyAddition,specialManagementAddition:value.specialManagementAddition,dischargeJointGuidance:value.dischargeJointGuidance,terminalCare:value.terminalCare,treatmentImprovement:value.treatmentImprovement,rehabOver12Months:value.rehabOver12Months,rehabFacilityReduction:value.rehabFacilityReduction}}
@@ -86,6 +96,7 @@ async function onMonthChanged(){if(form.targetMonth<"2026-06")form.treatmentImpr
 async function onInitialChanged(){if(form.initialAddition!=="none")form.dischargeJointGuidance=false;await saveHeader()}
 function openDay(date:string){selectedDate.value=date;selectedServices.value=dayMap.value.get(date)?.services||[];dialogOpen.value=true}
 async function saveDay(services:CareServiceEntryInput[]){if(!store.estimate)return;try{await store.saveDay({careEstimateId:store.estimate.id,visitDate:selectedDate.value,services});dialogOpen.value=false}catch(error){store.error=error instanceof Error?error.message:"保存に失敗しました。"}}
+async function copyDays(payload:{sourceDate:string;targetDates:string[];services:CareServiceEntryInput[]}){if(!store.estimate)return;try{const overwriteCount=payload.targetDates.filter(date=>dayMap.value.has(date)).length;const dates=[payload.sourceDate,...payload.targetDates];await store.saveDays({careEstimateId:store.estimate.id,days:dates.map(visitDate=>({visitDate,services:payload.services.map(service=>({...service}))}))});store.message=`${Number(payload.sourceDate.slice(5,7))}月${Number(payload.sourceDate.slice(8,10))}日の内容を保存し、${payload.targetDates.length}日へコピーしました${overwriteCount?`（${overwriteCount}日を上書き）`:""}。`;dialogOpen.value=false}catch(error){store.error=error instanceof Error?error.message:"コピーに失敗しました。"}}
 async function deleteDay(){try{await store.deleteDay(selectedDate.value);dialogOpen.value=false}catch(error){store.error=error instanceof Error?error.message:"削除に失敗しました。"}}
 async function reset(){confirmReset.value=false;await store.reset()}
 async function calculate(){if(!form.patientName.trim()){store.error="利用者名を入力してください。";return}if(!store.estimate?.serviceDays.some(day=>day.visitDate.startsWith(`${form.targetMonth}-`))){store.error="対象月の訪問サービスを1日以上登録してください。";return}try{await saveHeader();await store.calculate();await router.push({name:"care-cost-detail"})}catch(error){store.error=error instanceof Error?error.message:"計算に失敗しました。"}}

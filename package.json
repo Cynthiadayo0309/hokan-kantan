@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "capture:note": "electron scripts/capture-note-images.cjs",
     "release:manifest": "node scripts/create-release-manifest.mjs",
     "dist": "npm run build && electron-builder --win nsis && npm run release:manifest"
   },

@@ -29,6 +29,7 @@ const api: HokanApi = {
   getCareEstimate: () => ipcRenderer.invoke("hokan:getCareEstimate"),
   saveCareEstimate: (payload) => ipcRenderer.invoke("hokan:saveCareEstimate", payload),
   saveCareDay: (payload) => ipcRenderer.invoke("hokan:saveCareDay", payload),
+  saveCareDays: (payload) => ipcRenderer.invoke("hokan:saveCareDays", payload),
   deleteCareDay: (payload) => ipcRenderer.invoke("hokan:deleteCareDay", payload),
   calculateCareMonthlyEstimate: (payload) => ipcRenderer.invoke("hokan:calculateCareMonthlyEstimate", payload),
   resetCareEstimate: (payload) => ipcRenderer.invoke("hokan:resetCareEstimate", payload),

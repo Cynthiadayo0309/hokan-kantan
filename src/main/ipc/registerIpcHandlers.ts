@@ -7,7 +7,9 @@ import type {
   MonthlyReportExportPayload,
   ResetEstimatePayload,
   SaveDailyVisitPayload,
-  SaveDailyVisitsPayload
+  SaveDailyVisitsPayload,
+  SaveCareDayPayload,
+  SaveCareDaysPayload
 } from "../../shared/types";
 import { MonthlyEstimateCalculator } from "../services/MonthlyEstimateCalculator";
 import type { EstimateRepository } from "../repositories/EstimateRepository";
@@ -126,11 +128,16 @@ export function registerIpcHandlers(
     return careRepository.saveEstimate(payload);
   });
 
-  ipcMain.handle("hokan:saveCareDay", async (_event, payload) => {
+  ipcMain.handle("hokan:saveCareDay", async (_event, payload: SaveCareDayPayload) => {
     if (!payload || !Number.isInteger(payload.careEstimateId) || !/^\d{4}-\d{2}-\d{2}$/.test(payload.visitDate) || !Array.isArray(payload.services)) {
       throw new Error("介護保険の訪問内容が不正です。");
     }
     return careRepository.saveDay(payload.careEstimateId, payload.visitDate, payload.services);
+  });
+
+  ipcMain.handle("hokan:saveCareDays", async (_event, payload: SaveCareDaysPayload) => {
+    validateCareDaysPayload(payload);
+    return careRepository.saveDays(payload.careEstimateId, payload.days);
   });
 
   ipcMain.handle("hokan:deleteCareDay", async (_event, payload) => {
@@ -222,6 +229,22 @@ function validateCareEstimatePayload(payload: any): void {
   if (!['unset', '10', '20', '30'].includes(payload.copaymentRate)) throw new Error("自己負担割合が不正です。");
   if (payload.initialAddition !== 'none' && payload.dischargeJointGuidance) {
     throw new Error("初回加算と退院時共同指導加算は同時に選択できません。");
+  }
+}
+
+function validateCareDaysPayload(payload: SaveCareDaysPayload): void {
+  if (!payload || !Number.isInteger(payload.careEstimateId) || !Array.isArray(payload.days)) {
+    throw new Error("介護保険のコピー内容が不正です。");
+  }
+  if (payload.days.length < 1 || payload.days.length > 31) {
+    throw new Error("一度に保存できる日数は1日から31日までです。");
+  }
+  const dates = payload.days.map((day) => day?.visitDate);
+  if (dates.some((date) => !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) || new Set(dates).size !== dates.length) {
+    throw new Error("コピー先の日付が不正です。");
+  }
+  if (payload.days.some((day) => !day || typeof day !== "object" || !Array.isArray(day.services))) {
+    throw new Error("コピーするサービス内容が不正です。");
   }
 }
 

@@ -365,6 +365,16 @@ export type SaveCareDayPayload = {
   services: CareServiceEntryInput[];
 };
 
+export type CareServiceDayInput = {
+  visitDate: string;
+  services: CareServiceEntryInput[];
+};
+
+export type SaveCareDaysPayload = {
+  careEstimateId: number;
+  days: CareServiceDayInput[];
+};
+
 export type DeleteCareDayPayload = {
   careEstimateId: number;
   visitDate: string;
@@ -455,6 +465,7 @@ export type HokanApi = {
   getCareEstimate: () => Promise<CareEstimate>;
   saveCareEstimate: (payload: CareEstimateInput) => Promise<CareEstimate>;
   saveCareDay: (payload: SaveCareDayPayload) => Promise<CareEstimate>;
+  saveCareDays: (payload: SaveCareDaysPayload) => Promise<CareEstimate>;
   deleteCareDay: (payload: DeleteCareDayPayload) => Promise<CareEstimate>;
   calculateCareMonthlyEstimate: (payload: CalculateCareEstimatePayload) => Promise<CareCalculationResult>;
   resetCareEstimate: (payload: ResetCareEstimatePayload) => Promise<CareEstimate>;

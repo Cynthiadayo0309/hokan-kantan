@@ -4,6 +4,7 @@ import type {
   CareEstimateInput,
   CarePricingRule,
   CareRegionalGrade,
+  CareServiceDayInput,
   CareServiceDay,
   CareServiceEntry,
   CareServiceEntryInput
@@ -63,15 +64,16 @@ export class CareEstimateRepository {
   }
 
   saveDay(careEstimateId: number, visitDate: string, services: CareServiceEntryInput[]): CareEstimate {
+    return this.saveDays(careEstimateId, [{ visitDate, services }]);
+  }
+
+  saveDays(careEstimateId: number, days: CareServiceDayInput[]): CareEstimate {
     const estimate = this.getEstimate(careEstimateId);
     if (!estimate.patientName.trim()) throw new Error("利用者名を入力してください。");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate) || !visitDate.startsWith(`${estimate.targetMonth}-`)) {
-      throw new Error("訪問日は対象年月の日付を選択してください。");
-    }
-    const normalized = CareDailyServiceCalculator.normalize(services);
+    const normalizedDays = normalizeCareServiceDays(estimate.targetMonth, days);
     const timestamp = new Date().toISOString();
     const transaction = this.db.transaction(() => {
-      this.db.prepare("DELETE FROM care_service_entries WHERE care_monthly_estimate_id = ? AND visit_date = ?").run(careEstimateId, visitDate);
+      const remove = this.db.prepare("DELETE FROM care_service_entries WHERE care_monthly_estimate_id = ? AND visit_date = ?");
       const insert = this.db.prepare(`
         INSERT INTO care_service_entries (
           care_monthly_estimate_id, visit_date, sequence, profession, start_time, end_time, end_day_type,
@@ -79,12 +81,15 @@ export class CareEstimateRepository {
           warnings_json, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      normalized.forEach((service) => {
-        insert.run(
-          careEstimateId, visitDate, service.sequence, service.profession, service.startTime, service.endTime,
-          service.endDayType, bool(service.unplannedEmergency), service.durationMinutes, service.serviceCategory,
-          service.timeZoneType, JSON.stringify(service.timeZoneBreakdown), JSON.stringify(service.warnings), timestamp, timestamp
-        );
+      normalizedDays.forEach((day) => {
+        remove.run(careEstimateId, day.visitDate);
+        day.services.forEach((service) => {
+          insert.run(
+            careEstimateId, day.visitDate, service.sequence, service.profession, service.startTime, service.endTime,
+            service.endDayType, bool(service.unplannedEmergency), service.durationMinutes, service.serviceCategory,
+            service.timeZoneType, JSON.stringify(service.timeZoneBreakdown), JSON.stringify(service.warnings), timestamp, timestamp
+          );
+        });
       });
       this.touch(careEstimateId);
     });
@@ -188,6 +193,29 @@ export function validateCareEstimateInput(input: CareEstimateInput): void {
   if (input.initialAddition !== "none" && input.dischargeJointGuidance) {
     throw new Error("初回加算と退院時共同指導加算は同時に選択できません。");
   }
+}
+
+export function normalizeCareServiceDays(targetMonth: string, days: CareServiceDayInput[]) {
+  if (!Array.isArray(days) || days.length < 1 || days.length > 31) {
+    throw new Error("一度に保存できる日数は1日から31日までです。");
+  }
+  const visitDates = days.map((day) => day.visitDate);
+  if (new Set(visitDates).size !== visitDates.length) {
+    throw new Error("同じ日付が複数含まれています。");
+  }
+  return days.map((day) => {
+    if (!isValidDateKey(day.visitDate) || !day.visitDate.startsWith(`${targetMonth}-`)) {
+      throw new Error("訪問日は対象年月の日付を選択してください。");
+    }
+    return { visitDate: day.visitDate, services: CareDailyServiceCalculator.normalize(day.services) };
+  });
+}
+
+function isValidDateKey(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
 function bool(value: boolean): number {
