@@ -19,16 +19,28 @@
             <v-btn v-if="form.length > 1" color="error" variant="text" prepend-icon="mdi-delete-outline" @click="remove(index)">この行を削除</v-btn>
           </div>
           <div class="service-grid">
-            <v-select v-model="service.profession" label="訪問職種（必須）" :items="careProfessionOptions" item-title="title" item-value="value" />
-            <v-select v-model="service.startTime" label="開始時刻（必須）" :items="times" />
-            <v-select v-model="service.endTime" label="終了時刻（必須）" :items="times" />
-            <v-select v-model="service.endDayType" label="終了日" :items="endDayOptions" item-title="title" item-value="value" />
+            <v-select :model-value="service.profession" label="訪問職種（必須）" :items="careProfessionOptions" item-title="title" item-value="value" @update:model-value="updateProfession(index, $event)" />
+            <v-select :model-value="service.startTime" label="開始時刻（必須）" :items="times" @update:model-value="updateTime(index, 'startTime', $event)" />
+            <v-select :model-value="service.endTime" label="終了時刻（必須）" :items="times" @update:model-value="updateTime(index, 'endTime', $event)" />
+            <v-select :model-value="service.endDayType" label="終了日" :items="endDayOptions" item-title="title" item-value="value" @update:model-value="updateEndDayType(index, $event)" />
           </div>
+          <v-select
+            v-if="!isRehab(service.profession)"
+            :model-value="service.billingCategory"
+            class="billing-category-select"
+            label="算定区分（必須）"
+            :items="careNursingBillingCategoryOptions"
+            item-title="title"
+            item-value="value"
+            hint="訪問時刻とは別に、実際に算定する区分を選択してください。"
+            persistent-hint
+            @update:model-value="updateBillingCategory(index, $event)"
+          />
           <v-checkbox v-model="service.unplannedEmergency" label="計画外の緊急訪問" hide-details class="mt-n2" />
           <v-alert v-if="previews[index].error" type="error" variant="tonal" density="compact">{{ previews[index].error }}</v-alert>
           <div v-else class="preview-grid">
             <div><span>訪問時間</span><strong>{{ previews[index].durationMinutes }}分</strong></div>
-            <div><span>算定区分</span><strong>{{ serviceCategoryLabel(service.profession, previews[index].durationMinutes) }}</strong></div>
+            <div><span>算定区分</span><strong>{{ selectedCategoryLabel(service, previews[index].durationMinutes) }}</strong></div>
             <div><span>開始時間帯</span><strong>{{ startZoneLabel(service.startTime) }}</strong></div>
             <div><span>時間帯内訳</span><strong>{{ breakdownLabel(previews[index].breakdown) }}</strong></div>
           </div>
@@ -37,6 +49,9 @@
           </v-alert>
           <v-alert v-if="isRehab(service.profession) && previews[index].durationMinutes % 20 !== 0" type="warning" variant="tonal" density="compact" class="mt-3">
             20分に満たない端数時間は算定回数に含めません。
+          </v-alert>
+          <v-alert v-if="billingCategoryMismatch(service, previews[index].durationMinutes)" type="warning" variant="tonal" density="compact" class="mt-3">
+            訪問時間{{ previews[index].durationMinutes }}分に対して「{{ nursingBillingCategoryLabel(service.billingCategory!) }}」が選択されています。実績時間と算定区分を確認してください。
           </v-alert>
         </section>
 
@@ -138,7 +153,20 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { CareProfession, CareServiceEntry, CareServiceEntryInput, TimeZoneBreakdown } from "../../shared/types";
+import type {
+  CareNursingBillingCategory,
+  CareProfession,
+  CareServiceEntry,
+  CareServiceEntryInput,
+  EndDayType,
+  TimeZoneBreakdown
+} from "../../shared/types";
+import {
+  careNursingBillingCategoryOptions,
+  isCareNursingBillingCategory,
+  nursingBillingCategoryForDuration,
+  nursingBillingCategoryLabel
+} from "../../shared/careBilling";
 import { careProfessionOptions, endDayOptions, timeOptions } from "../utils/careOptions";
 import { calendarWeeksInMonth, daysInMonth, weekdayLabel } from "../utils/date";
 import { previewTime } from "../utils/timePreview";
@@ -161,6 +189,7 @@ const emit = defineEmits<{
 }>();
 
 const form = ref<CareServiceEntryInput[]>([]);
+const billingCategoryTouched = ref<boolean[]>([]);
 const error = ref("");
 const confirmDelete = ref(false);
 const confirmCopy = ref(false);
@@ -205,6 +234,9 @@ watch(
   (value) => {
     if (!value) return;
     form.value = props.services.length ? props.services.map(toInput) : [defaultService(1)];
+    billingCategoryTouched.value = props.services.length
+      ? props.services.map((service) => !isRehab(service.profession))
+      : [false];
     error.value = "";
     confirmDelete.value = false;
     confirmCopy.value = false;
@@ -224,21 +256,67 @@ function toInput(service: CareServiceEntry): CareServiceEntryInput {
     startTime: service.startTime,
     endTime: service.endTime,
     endDayType: service.endDayType,
-    unplannedEmergency: service.unplannedEmergency
+    unplannedEmergency: service.unplannedEmergency,
+    ...(isRehab(service.profession)
+      ? {}
+      : { billingCategory: isCareNursingBillingCategory(service.serviceCategory) ? service.serviceCategory : "under_90" })
   };
 }
 
 function defaultService(sequence: number): CareServiceEntryInput {
-  return { sequence, profession: "nurse", startTime: "09:00", endTime: "09:30", endDayType: "same_day", unplannedEmergency: false };
+  return {
+    sequence,
+    profession: "nurse",
+    startTime: "09:00",
+    endTime: "09:30",
+    endDayType: "same_day",
+    unplannedEmergency: false,
+    billingCategory: "under_60"
+  };
 }
 
 function add(): void {
   form.value.push(defaultService(form.value.length + 1));
+  billingCategoryTouched.value.push(false);
 }
 
 function remove(index: number): void {
   form.value.splice(index, 1);
+  billingCategoryTouched.value.splice(index, 1);
   form.value.forEach((item, itemIndex) => { item.sequence = itemIndex + 1; });
+}
+
+function updateProfession(index: number, profession: CareProfession): void {
+  const service = form.value[index];
+  const wasRehab = isRehab(service.profession);
+  service.profession = profession;
+  if (!isRehab(profession) && wasRehab) {
+    billingCategoryTouched.value[index] = false;
+    syncSuggestedBillingCategory(index);
+  }
+}
+
+function updateTime(index: number, field: "startTime" | "endTime", value: string): void {
+  form.value[index][field] = value;
+  syncSuggestedBillingCategory(index);
+}
+
+function updateEndDayType(index: number, value: EndDayType): void {
+  form.value[index].endDayType = value;
+  syncSuggestedBillingCategory(index);
+}
+
+function updateBillingCategory(index: number, value: CareNursingBillingCategory): void {
+  if (!isCareNursingBillingCategory(value)) return;
+  form.value[index].billingCategory = value;
+  billingCategoryTouched.value[index] = true;
+}
+
+function syncSuggestedBillingCategory(index: number): void {
+  const service = form.value[index];
+  if (!service || isRehab(service.profession) || billingCategoryTouched.value[index]) return;
+  const preview = previewTime(service.startTime, service.endTime, service.endDayType);
+  if (!preview.error) service.billingCategory = nursingBillingCategoryForDuration(preview.durationMinutes);
 }
 
 function close(): void {
@@ -283,7 +361,17 @@ function buildSavableServices(): CareServiceEntryInput[] | null {
     error.value = "リハビリ専門職の訪問は20分以上で入力してください。";
     return null;
   }
-  return form.value.map((item, index) => ({ ...item, sequence: index + 1 }));
+  return form.value.map((item, index) => ({
+    sequence: index + 1,
+    profession: item.profession,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    endDayType: item.endDayType,
+    unplannedEmergency: item.unplannedEmergency,
+    ...(isRehab(item.profession)
+      ? {}
+      : { billingCategory: item.billingCategory ?? nursingBillingCategoryForDuration(previews.value[index].durationMinutes) })
+  }));
 }
 
 function removeDay(): void {
@@ -342,13 +430,13 @@ function isRehab(value: CareProfession): boolean {
   return ["physical_therapist", "occupational_therapist", "speech_therapist"].includes(value);
 }
 
-function serviceCategoryLabel(profession: CareProfession, minutes: number): string {
-  if (isRehab(profession)) return `${Math.floor(minutes / 20)}回（20分単位）`;
-  if (minutes < 20) return "20分未満";
-  if (minutes < 30) return "20分以上30分未満";
-  if (minutes < 60) return "30分以上1時間未満";
-  if (minutes < 90) return "1時間以上1時間30分未満";
-  return "90分以上（長時間）";
+function selectedCategoryLabel(service: CareServiceEntryInput, minutes: number): string {
+  if (isRehab(service.profession)) return `${Math.floor(minutes / 20)}回（20分単位）`;
+  return nursingBillingCategoryLabel(service.billingCategory ?? nursingBillingCategoryForDuration(minutes));
+}
+
+function billingCategoryMismatch(service: CareServiceEntryInput, minutes: number): boolean {
+  return !isRehab(service.profession) && Boolean(service.billingCategory) && service.billingCategory !== nursingBillingCategoryForDuration(minutes);
 }
 
 function startZoneLabel(time: string): string {
@@ -368,6 +456,7 @@ function breakdownLabel(value: TimeZoneBreakdown[]): string {
 <style scoped>
 .service-card{border:1px solid #b7ccc7;border-radius:12px;padding:18px;background:#fbfefd}
 .service-grid{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:12px}
+.billing-category-select{max-width:430px}
 .preview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px;border-radius:8px;background:#eaf5f2}
 .preview-grid span{display:block;font-size:12px;color:#55736d}
 .preview-grid strong{display:block;margin-top:3px}

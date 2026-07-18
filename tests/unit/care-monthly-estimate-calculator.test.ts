@@ -36,6 +36,17 @@ describe("CareMonthlyEstimateCalculator", () => {
     expect(calculate(estimate).totals.totalUnits).toBe(451);
   });
 
+  it("30分ちょうどでも選択した30分未満の単位を優先する", () => {
+    const care = estimateWith([day("2026-07-10", service({ startTime: "10:00", endTime: "10:30", billingCategory: "under_30" }))]);
+    const careResult = calculate(care);
+    expect(careResult.totals.totalUnits).toBe(471);
+    expect(careResult.warnings).toContain("7月10日 訪問時間30分に対して「30分未満」が選択されています。実績時間と算定区分を確認してください。");
+
+    const support = estimateWith(care.serviceDays);
+    support.careClassification = "support";
+    expect(calculate(support).totals.totalUnits).toBe(451);
+  });
+
   it.each([
     ["10:00", "10:15", 314, 303],
     ["10:00", "10:25", 471, 451],
@@ -88,6 +99,14 @@ describe("CareMonthlyEstimateCalculator", () => {
       day("2026-07-08", service({ startTime: "10:00", endTime: "10:20" }))
     ]));
     expect(result.totals.totalUnits).toBe(314 + 471);
+  });
+
+  it("20分未満を選択したサービス自身は週内の20分以上訪問として数えない", () => {
+    const result = calculate(estimateWith([
+      day("2026-07-06", service({ startTime: "10:00", endTime: "10:30", billingCategory: "under_20" }))
+    ]));
+    expect(result.totals.totalUnits).toBe(0);
+    expect(result.lines[0].includedInTotal).toBe(false);
   });
 
   it("准看護師90%と同一建物15%減算を順に適用する", () => {
@@ -155,6 +174,23 @@ describe("carePricingVersion", () => {
 });
 
 describe("CareDailyServiceCalculator", () => {
+  it.each([
+    ["10:00", "10:19", "under_20"],
+    ["10:00", "10:20", "under_30"],
+    ["10:00", "10:30", "under_60"],
+    ["10:00", "11:00", "under_90"],
+    ["10:00", "11:30", "under_90"]
+  ] as const)("算定区分未指定の%s～%sは公式境界で%sに分類する", (startTime, endTime, expected) => {
+    const [entry] = CareDailyServiceCalculator.normalize([input({ startTime, endTime })]);
+    expect(entry.serviceCategory).toBe(expected);
+  });
+
+  it("明示した算定区分と実時間が異なる場合も保存し警告する", () => {
+    const [entry] = CareDailyServiceCalculator.normalize([input({ billingCategory: "under_30" })]);
+    expect(entry.serviceCategory).toBe("under_30");
+    expect(entry.warnings).toContain("訪問時間30分に対して「30分未満」が選択されています。実績時間と算定区分を確認してください。");
+  });
+
   it("同日のサービス時間が重複する場合は保存できない", () => {
     expect(() => CareDailyServiceCalculator.normalize([
       input({ sequence: 1, startTime: "10:00", endTime: "10:30" }),

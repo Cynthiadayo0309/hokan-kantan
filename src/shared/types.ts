@@ -308,6 +308,7 @@ export type CareProfession =
   | "occupational_therapist"
   | "speech_therapist";
 export type CareServiceCategory = "under_20" | "under_30" | "under_60" | "under_90" | "long" | "rehab";
+export type CareNursingBillingCategory = "under_20" | "under_30" | "under_60" | "under_90";
 export type CareLineCategory = "basic" | "addition" | "deduction";
 
 export type CareServiceEntryInput = {
@@ -318,6 +319,7 @@ export type CareServiceEntryInput = {
   endTime: string;
   endDayType: EndDayType;
   unplannedEmergency: boolean;
+  billingCategory?: CareNursingBillingCategory;
 };
 
 export type CareServiceEntry = CareServiceEntryInput & {

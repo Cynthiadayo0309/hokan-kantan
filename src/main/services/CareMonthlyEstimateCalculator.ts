@@ -225,7 +225,13 @@ function hasEligibleTwentyMinuteVisit(date: string, days: CareEstimate["serviceD
   return days.some(
     (day) =>
       day.visitDate >= start && day.visitDate <= end &&
-      day.services.some((service) => !isRehab(service.profession) && service.durationMinutes >= 20 && TimeZoneClassifier.zoneAt(service.startTime) === "daytime")
+      day.services.some(
+        (service) =>
+          !isRehab(service.profession) &&
+          service.serviceCategory !== "under_20" &&
+          service.durationMinutes >= 20 &&
+          TimeZoneClassifier.zoneAt(service.startTime) === "daytime"
+      )
   );
 }
 

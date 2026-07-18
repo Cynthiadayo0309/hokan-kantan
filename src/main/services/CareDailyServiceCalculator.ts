@@ -1,4 +1,9 @@
 import type { CareProfession, CareServiceCategory, CareServiceEntry, CareServiceEntryInput } from "../../shared/types";
+import {
+  isCareNursingBillingCategory,
+  nursingBillingCategoryForDuration,
+  nursingBillingCategoryLabel
+} from "../../shared/careBilling";
 import { TimeZoneClassifier, parseTimeToMinutes } from "./TimeZoneClassifier";
 
 export class CareDailyServiceCalculator {
@@ -10,12 +15,20 @@ export class CareDailyServiceCalculator {
     const normalized = inputs.map((input, index) => {
       this.validateInput(input);
       const classified = TimeZoneClassifier.classify(input.startTime, input.endTime, input.endDayType);
-      const serviceCategory = this.serviceCategory(input.profession, classified.durationMinutes);
+      const serviceCategory = this.serviceCategory(input, classified.durationMinutes);
       const warnings: string[] = [];
       if (classified.timeZoneType === "mixed") warnings.push("複数の時間帯にまたがっています。介護保険の時間帯加算は開始時刻で判定します。");
       if (input.endDayType === "next_day") warnings.push("訪問が翌日にまたがっています。");
       if (isRehab(input.profession) && classified.durationMinutes % 20 !== 0) {
         warnings.push("20分に満たない端数時間は算定回数に含めません。");
+      }
+      if (!isRehab(input.profession) && input.billingCategory) {
+        const suggestedCategory = nursingBillingCategoryForDuration(classified.durationMinutes);
+        if (input.billingCategory !== suggestedCategory) {
+          warnings.push(
+            `訪問時間${classified.durationMinutes}分に対して「${nursingBillingCategoryLabel(input.billingCategory)}」が選択されています。実績時間と算定区分を確認してください。`
+          );
+        }
       }
       return {
         ...input,
@@ -41,18 +54,17 @@ export class CareDailyServiceCalculator {
     if (input.endDayType !== "same_day" && input.endDayType !== "next_day") {
       throw new Error("終了日区分を選択してください。");
     }
+    if (input.billingCategory !== undefined && !isCareNursingBillingCategory(input.billingCategory)) {
+      throw new Error("算定区分を選択してください。");
+    }
   }
 
-  private static serviceCategory(profession: CareProfession, durationMinutes: number): CareServiceCategory {
-    if (isRehab(profession)) {
+  private static serviceCategory(input: CareServiceEntryInput, durationMinutes: number): CareServiceCategory {
+    if (isRehab(input.profession)) {
       if (durationMinutes < 20) throw new Error("リハビリ専門職の訪問は20分以上で入力してください。");
       return "rehab";
     }
-    if (durationMinutes < 20) return "under_20";
-    if (durationMinutes < 30) return "under_30";
-    if (durationMinutes < 60) return "under_60";
-    if (durationMinutes < 90) return "under_90";
-    return "long";
+    return input.billingCategory ?? nursingBillingCategoryForDuration(durationMinutes);
   }
 
   private static assertNoOverlap(entries: Array<{ startTime: string; durationMinutes: number; sequence: number }>): void {

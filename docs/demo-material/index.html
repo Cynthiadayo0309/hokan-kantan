@@ -9,152 +9,189 @@
   <body>
     <main class="deck">
       <section class="page cover">
-        <div class="cover-label">施設担当者向け 紹介資料</div>
+        <div class="cover-label">施設担当者・訪問看護関係者向け 紹介資料</div>
         <h1>訪看かんたん計算</h1>
         <p class="subtitle">施設内訪問看護 月額費用シミュレーター</p>
+        <p class="edition">医療保険・介護保険対応版 <span>v{{APP_VERSION}}</span></p>
         <p class="lead">
-          施設内で医療保険の訪問看護を利用する1人の利用者について、1か月分の訪問予定と算定条件を入力し、
-          月額費用と利用者負担額の概算を確認するためのWindows向けデスクトップアプリです。
+          1人の利用者について1か月分の訪問予定と算定条件を入力し、
+          医療保険または介護保険の月額費用と利用者負担額の概算を確認するWindows向けデスクトップアプリです。
         </p>
         <div class="cover-points">
-          <div>月間予定を一覧で確認</div>
-          <div>日別の訪問内容を選択式で入力</div>
-          <div>費用明細と概算合計を表示</div>
+          <div>起動時に<br />保険種別を選択</div>
+          <div>月間予定と<br />訪問内容を入力</div>
+          <div>費用明細と<br />概算合計を確認</div>
         </div>
         <p class="disclaimer">本計算結果は概算です。実際の算定・請求内容を保証するものではありません。</p>
       </section>
 
       <section class="page">
         <p class="kicker">Purpose</p>
-        <h2>施設内訪問看護の月額費用を、確認しやすく</h2>
+        <h2>月間予定から費用の目安まで、ひとつの流れで確認</h2>
         <div class="two-column">
           <div>
             <h3>こんな場面を想定しています</h3>
             <ul>
               <li>サービス提供票を見ながら、1人分の月間訪問予定を整理したい。</li>
-              <li>訪問時間帯や加算条件を入力し、概算の費用感を確認したい。</li>
-              <li>自己負担割合を設定して、利用者負担額の目安を把握したい。</li>
+              <li>訪問時間や職種、施設条件、加算条件を入力して費用感を確認したい。</li>
+              <li>自己負担割合に応じた利用者負担額の目安を把握したい。</li>
             </ul>
           </div>
           <div class="note-box">
-            <h3>対象外のこと</h3>
+            <h3>本アプリの位置付け</h3>
             <p>
-              請求処理、レセプト作成、正式な請求額の確定、複数利用者の一括計算は行いません。
-              あくまで現場確認用の概算ツールとして使用します。
+              現場での確認を支援する概算ツールです。請求処理、レセプト作成、正式な請求額の確定、
+              複数利用者の一括計算は行いません。
             </p>
           </div>
         </div>
-        <div class="flow">
-          <div><span>1</span> 月間予定を入力</div>
-          <div><span>2</span> 日別訪問を登録</div>
-          <div><span>3</span> 費用明細を確認</div>
+        <div class="flow four">
+          <div><span>1</span> 保険を選ぶ</div>
+          <div><span>2</span> 月間条件を入力</div>
+          <div><span>3</span> 日別訪問を登録</div>
+          <div><span>4</span> 費用明細を確認</div>
+        </div>
+        <div class="tip-box">
+          <h3>入力を助ける仕組み</h3>
+          <p>時刻から訪問時間と時間帯を自動判定し、確認が必要な条件は警告と文章で案内します。</p>
         </div>
       </section>
 
       <section class="page">
-        <p class="kicker">Screen 1</p>
-        <h2>月間入力画面</h2>
+        <p class="kicker">Insurance Selection</p>
+        <h2>起動時に「医療保険」「介護保険」を選択</h2>
         <p class="body-copy">
-          利用者名、施設名、対象年月、同一建物人数区分、自己負担割合を入力し、対象月の日付を一覧で確認します。
-          訪問内容が登録済みの日付には要約が表示されます。
+          保険証や介護保険被保険者証を確認して、計算する保険を選びます。画面上部からいつでも選び直せます。
         </p>
-        <figure class="screenshot-frame">
-          <img src="./assets/monthly-input.png" alt="月間入力画面の画面キャプチャ" />
+        <figure class="screenshot-frame hero-shot">
+          <img src="./assets/insurance-select.png" alt="医療保険と介護保険の選択画面" />
         </figure>
         <ul class="feature-list">
-          <li>日付を1回クリックして日別入力を開きます。</li>
-          <li>土日・祝日や今日が視覚的に分かります。</li>
-          <li>入力済みの日付は職種、時刻、時間帯を要約表示します。</li>
+          <li>保険種別を大きなボタンで選べます。</li>
+          <li>医療・介護それぞれの入力内容を保持します。</li>
+          <li>保険が不明な場合の確認先を案内します。</li>
+        </ul>
+      </section>
+
+      <section class="page medical-page">
+        <p class="kicker medical">Medical Insurance</p>
+        <h2>医療保険：月間予定と日別訪問を入力</h2>
+        <p class="body-copy">
+          月間カレンダーから日付を選び、基本療養費、管理療養費、職種、訪問回数、時刻、加算条件を登録します。
+        </p>
+        <div class="stacked-shots">
+          <figure class="screenshot-frame compact-shot">
+            <figcaption>月間入力画面</figcaption>
+            <img src="./assets/medical-monthly.png" alt="医療保険の月間入力画面" />
+          </figure>
+          <figure class="screenshot-frame compact-shot">
+            <figcaption>日別入力ダイアログ</figcaption>
+            <img src="./assets/medical-daily.png" alt="医療保険の日別入力ダイアログ" />
+          </figure>
+        </div>
+        <div class="inline-points">
+          <span>1日複数回の訪問</span><span>時間帯またぎの内訳</span><span>訪問時間の重複チェック</span>
+        </div>
+      </section>
+
+      <section class="page medical-page">
+        <p class="kicker medical">Medical Detail</p>
+        <h2>医療保険：算定内容と円額の内訳を表示</h2>
+        <p class="body-copy">
+          基本療養費、管理療養費、各種加算を明細化し、月額費用総額と利用者負担額の概算を表示します。
+        </p>
+        <figure class="screenshot-frame detail-shot">
+          <img src="./assets/medical-cost-detail.png" alt="医療保険の費用明細画面" />
+        </figure>
+        <ul class="feature-list">
+          <li>同じ算定条件は可能な範囲でまとめます。</li>
+          <li>根拠や警告を明細行で確認できます。</li>
+          <li>印刷・PDF・Excelへ保存できます。</li>
+        </ul>
+      </section>
+
+      <section class="page care-page">
+        <p class="kicker care">Care Insurance</p>
+        <h2>介護保険：施設条件と月間サービスを入力</h2>
+        <p class="body-copy">
+          要介護・要支援、地域区分、同一建物減算、月ごとの加算を設定し、カレンダーへ訪問サービスを登録します。
+        </p>
+        <div class="stacked-shots">
+          <figure class="screenshot-frame compact-shot">
+            <figcaption>基本情報・施設条件</figcaption>
+            <img src="./assets/care-settings.png" alt="介護保険の基本情報と施設条件" />
+          </figure>
+          <figure class="screenshot-frame compact-shot">
+            <figcaption>介護保険の月間カレンダー</figcaption>
+            <img src="./assets/care-calendar.png" alt="介護保険の月間予定カレンダー" />
+          </figure>
+        </div>
+        <div class="inline-points care-points">
+          <span>地域単価を表示</span><span>10%・15%減算に対応</span><span>月額加算を選択</span>
+        </div>
+      </section>
+
+      <section class="page care-page">
+        <p class="kicker care">Care Services &amp; Copy</p>
+        <h2>複数サービスの登録と、訪問内容のコピー</h2>
+        <p class="body-copy">
+          同じ日に看護職とリハビリ職を複数登録できます。看護職は訪問時刻とは別に算定区分を選び、入力したサービス全体を別の日へコピーできます。
+        </p>
+        <div class="stacked-shots">
+          <figure class="screenshot-frame compact-shot">
+            <figcaption>看護職・リハビリ職を同じ日に登録</figcaption>
+            <img src="./assets/care-daily-services.png" alt="介護保険の複数サービス入力画面" />
+          </figure>
+          <figure class="screenshot-frame compact-shot copy-shot">
+            <figcaption>日付を選んで訪問内容をコピー</figcaption>
+            <img src="./assets/care-copy.png" alt="介護保険の訪問内容コピー画面" />
+          </figure>
+        </div>
+        <div class="copy-note">
+          <strong>コピー方法</strong>
+          <span>算定区分もコピー</span><span>同じ曜日すべて</span><span>日付を複数選択</span><span>登録済み日は確認後に上書き</span>
+        </div>
+      </section>
+
+      <section class="page care-page">
+        <p class="kicker care">Care Detail</p>
+        <h2>介護保険：単位数・地域単価・自己負担額を確認</h2>
+        <p class="body-copy">
+          基本報酬、加算、減算を単位で表示し、地域単価から総費用と利用者負担額の概算を算出します。
+        </p>
+        <figure class="screenshot-frame detail-shot">
+          <img src="./assets/care-cost-detail.png" alt="介護保険の費用明細画面" />
+        </figure>
+        <ul class="feature-list care-list">
+          <li>看護職は訪問時間区分を自動判定します。</li>
+          <li>リハビリは20分単位で算定回数を表示します。</li>
+          <li>夜間・早朝、深夜、減算も明細化します。</li>
         </ul>
       </section>
 
       <section class="page">
-        <p class="kicker">Screen 2</p>
-        <h2>日別入力ダイアログ</h2>
-        <p class="body-copy">
-          その日の訪問内容を、上から順に選択して登録します。開始時刻・終了時刻から訪問時間と時間帯を自動表示します。
-        </p>
-        <figure class="screenshot-frame">
-          <img src="./assets/daily-dialog.png" alt="日別入力ダイアログの画面キャプチャ" />
-        </figure>
-        <div class="two-column compact">
-          <ul>
-            <li>基本療養費と管理療養費を別々に選択できます。</li>
-            <li>1日複数回の訪問に対応します。</li>
-          </ul>
-          <ul>
-            <li>時間帯またぎは警告表示で確認できます。</li>
-            <li>加算条件は必要な場合だけ開いて選択します。</li>
-          </ul>
+        <p class="kicker">Use &amp; Cautions</p>
+        <h2>オフラインで使えるWindowsアプリ</h2>
+        <div class="cards four-cards">
+          <article><h3>オフライン</h3><p>インターネット接続なしで入力・計算できます。</p></article>
+          <article><h3>データ保持</h3><p>入力内容はPC内へ保存され、再起動後も確認できます。</p></article>
+          <article><h3>確認用出力</h3><p>印刷プレビュー、印刷、PDF、Excelに対応します。</p></article>
+          <article><h3>簡単な導入</h3><p>Windows用インストーラーから導入できます。</p></article>
         </div>
-      </section>
-
-      <section class="page">
-        <p class="kicker">Screen 3</p>
-        <h2>費用明細画面</h2>
-        <p class="body-copy">
-          入力済みの月間予定から、基本療養費、管理療養費、各種加算、月額費用総額、利用者負担額の概算を表示します。
-        </p>
-        <figure class="screenshot-frame">
-          <img src="./assets/cost-detail.png" alt="費用明細画面の画面キャプチャ" />
-        </figure>
-        <ul class="feature-list">
-          <li>同じ算定条件は、可能な範囲でまとめて表示します。</li>
-          <li>警告がある明細は内容確認が必要な行として表示します。</li>
-          <li>自己負担割合が未設定の場合、利用者負担額は表示しません。</li>
-        </ul>
-      </section>
-
-      <section class="page">
-        <p class="kicker">Features</p>
-        <h2>主な機能</h2>
-        <div class="cards">
-          <article>
-            <h3>時間帯の自動判定</h3>
-            <p>深夜、早朝、通常、夜間を時刻から判定し、時間帯またぎの場合は内訳を表示します。</p>
-          </article>
-          <article>
-            <h3>複数回訪問</h3>
-            <p>1日2回以上の訪問を登録でき、同じ日の訪問時間が重複する場合は保存できません。</p>
-          </article>
-          <article>
-            <h3>加算項目の選択</h3>
-            <p>複数名訪問、長時間訪問、緊急訪問、特別管理加算、退院関連の項目を選択できます。</p>
-          </article>
-          <article>
-            <h3>自己負担額の概算</h3>
-            <p>1割、2割、3割の自己負担割合を設定し、月額費用総額に対する概算額を表示します。</p>
-          </article>
-        </div>
-        <div class="note-box wide">
-          <h3>料金マスターについて</h3>
-          <p>
-            金額や算定条件は料金マスターを参照します。料金マスターの内容により計算結果が変わります。
-            正式な費用計算には、制度・通知・専門職の確認に基づく料金マスター更新が必要です。
-          </p>
-        </div>
-      </section>
-
-      <section class="page">
-        <p class="kicker">Install</p>
-        <h2>導入と使用時の注意</h2>
-        <div class="two-column">
+        <div class="two-column install-block">
           <div>
             <h3>導入の流れ</h3>
             <ol>
               <li>インストーラーを実行します。</li>
-              <li>画面の案内に従ってインストールします。</li>
-              <li>デスクトップアイコンまたはスタートメニューから起動します。</li>
-              <li>月間予定を入力し、費用明細を確認します。</li>
+              <li>案内に従ってインストールします。</li>
+              <li>デスクトップまたはスタートメニューから起動します。</li>
             </ol>
           </div>
           <div>
-            <h3>利用環境</h3>
+            <h3>利用時の確認</h3>
             <ul>
-              <li>Windows 64bit PC向けです。</li>
-              <li>インターネット接続なしで使用できます。</li>
-              <li>ログインやユーザー登録は不要です。</li>
-              <li>入力データは利用者ごとのPC内に保存されます。</li>
+              <li>料金マスターと制度・通知の最新状況を確認してください。</li>
+              <li>医療保険が優先される条件は専門職へ確認してください。</li>
             </ul>
           </div>
         </div>
@@ -162,8 +199,9 @@
           <h3>重要な注意事項</h3>
           <ul>
             <li>本アプリは概算ツールです。正式な請求、レセプト、請求額確定には使用しないでください。</li>
-            <li>未署名インストーラーでは、Windowsの警告が表示される可能性があります。</li>
-            <li>アンインストールしても、入力データが自動削除されない場合があります。</li>
+            <li>介護保険の区分支給限度基準額、他サービス利用額、高額介護サービス費、公費等は計算に含みません。</li>
+            <li>未対応の加減算や個別条件がある場合は、最新資料と専門職による確認が必要です。</li>
+            <li>未署名インストーラーでは、Windowsの警告が表示される場合があります。</li>
           </ul>
         </div>
       </section>
