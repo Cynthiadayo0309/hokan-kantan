@@ -16,41 +16,45 @@ function mountDialog(existingVisitDates: string[] = [], services: CareServiceEnt
 }
 
 describe("CareDailyServiceDialog copy", () => {
-  it("時刻から算定区分を仮選択し、手動選択後は時刻変更で上書きしない", () => {
+  it("看護職は30分未満を初期値にして終了時刻を29分後に表示する", () => {
     const wrapper = mountDialog();
     const vm = wrapper.vm as unknown as {
       form: CareServiceEntryInput[];
-      updateTime: (index: number, field: "startTime" | "endTime", value: string) => void;
-      updateBillingCategory: (index: number, value: "under_20" | "under_30" | "under_60" | "under_90") => void;
+      endTimeLabel: (index: number) => string;
     };
 
-    expect(vm.form[0].billingCategory).toBe("under_60");
-    vm.updateTime(0, "endTime", "09:25");
     expect(vm.form[0].billingCategory).toBe("under_30");
-
-    vm.updateBillingCategory(0, "under_20");
-    vm.updateTime(0, "endTime", "09:30");
-    expect(vm.form[0].billingCategory).toBe("under_20");
+    expect(vm.endTimeLabel(0)).toBe("9:29");
   });
 
-  it("リハビリ職から看護職へ戻すと現在時刻から算定区分を仮選択する", () => {
+  it("職種変更時にリハビリ20分と看護職30分未満へ切り替える", () => {
     const wrapper = mountDialog();
     const vm = wrapper.vm as unknown as {
       form: CareServiceEntryInput[];
       updateProfession: (index: number, value: CareServiceEntryInput["profession"]) => void;
-      updateBillingCategory: (index: number, value: "under_20" | "under_30" | "under_60" | "under_90") => void;
+      updateRehabDuration: (index: number, value: number) => void;
     };
 
-    vm.updateBillingCategory(0, "under_20");
     vm.updateProfession(0, "physical_therapist");
+    expect(vm.form[0].billingCategory).toBeUndefined();
+    expect(vm.form[0].rehabDurationMinutes).toBe(20);
+    vm.updateRehabDuration(0, 40);
+    expect(vm.form[0].rehabDurationMinutes).toBe(40);
+
     vm.updateProfession(0, "nurse");
-    expect(vm.form[0].billingCategory).toBe("under_60");
+    expect(vm.form[0].rehabDurationMinutes).toBeUndefined();
+    expect(vm.form[0].billingCategory).toBe("under_30");
   });
 
-  it("保存済みサービスは選択した算定区分を保持して開く", () => {
+  it("保存済みの30分ちょうどは30分以上1時間未満として開く", () => {
     const saved: CareServiceEntry = {
-      ...service({ billingCategory: "under_30" }),
       id: 1,
+      sequence: 1,
+      profession: "nurse",
+      startTime: "09:00",
+      endTime: "09:30",
+      endDayType: "same_day",
+      unplannedEmergency: false,
       durationMinutes: 30,
       serviceCategory: "under_30",
       timeZoneType: "daytime",
@@ -60,12 +64,11 @@ describe("CareDailyServiceDialog copy", () => {
     const wrapper = mountDialog([], [saved]);
     const vm = wrapper.vm as unknown as {
       form: CareServiceEntryInput[];
-      updateTime: (index: number, field: "startTime" | "endTime", value: string) => void;
+      endTimeLabel: (index: number) => string;
     };
 
-    expect(vm.form[0].billingCategory).toBe("under_30");
-    vm.updateTime(0, "endTime", "10:00");
-    expect(vm.form[0].billingCategory).toBe("under_30");
+    expect(vm.form[0].billingCategory).toBe("under_60");
+    expect(vm.endTimeLabel(0)).toBe("9:59");
   });
 
   it("selects every matching weekday in the target month except the source date", () => {
@@ -103,8 +106,8 @@ describe("CareDailyServiceDialog copy", () => {
       pendingOverwriteDates: string[];
     };
     vm.form = [
-      service({ profession: "nurse", startTime: "09:00", endTime: "09:30", billingCategory: "under_30" }),
-      service({ sequence: 2, profession: "physical_therapist", startTime: "10:00", endTime: "10:40", unplannedEmergency: true })
+      service({ profession: "nurse", startTime: "09:00", billingCategory: "under_30" }),
+      service({ sequence: 2, profession: "physical_therapist", startTime: "10:00", rehabDurationMinutes: 40, unplannedEmergency: true })
     ];
 
     vm.prepareCopy();
@@ -120,7 +123,8 @@ describe("CareDailyServiceDialog copy", () => {
     expect(payload.targetDates).toEqual(["2026-07-01", "2026-07-08", "2026-07-22", "2026-07-29"]);
     expect(payload.services).toHaveLength(2);
     expect(payload.services[0].billingCategory).toBe("under_30");
-    expect(payload.services[1]).toMatchObject({ profession: "physical_therapist", startTime: "10:00", endTime: "10:40", unplannedEmergency: true });
+    expect(payload.services[1]).toMatchObject({ profession: "physical_therapist", startTime: "10:00", rehabDurationMinutes: 40, unplannedEmergency: true });
+    expect(payload.services[1].endTime).toBeUndefined();
     expect(payload.services[1].billingCategory).toBeUndefined();
   });
 
@@ -147,9 +151,8 @@ function service(overrides: Partial<CareServiceEntryInput> = {}): CareServiceEnt
     sequence: 1,
     profession: "nurse",
     startTime: "09:00",
-    endTime: "09:30",
-    endDayType: "same_day",
     unplannedEmergency: false,
+    billingCategory: "under_30",
     ...overrides
   };
 }

@@ -20,38 +20,36 @@
           </div>
           <div class="service-grid">
             <v-select :model-value="service.profession" label="訪問職種（必須）" :items="careProfessionOptions" item-title="title" item-value="value" @update:model-value="updateProfession(index, $event)" />
-            <v-select :model-value="service.startTime" label="開始時刻（必須）" :items="times" @update:model-value="updateTime(index, 'startTime', $event)" />
-            <v-select :model-value="service.endTime" label="終了時刻（必須）" :items="times" @update:model-value="updateTime(index, 'endTime', $event)" />
-            <v-select :model-value="service.endDayType" label="終了日" :items="endDayOptions" item-title="title" item-value="value" @update:model-value="updateEndDayType(index, $event)" />
+            <v-select :model-value="service.startTime" label="開始時刻（必須）" :items="times" @update:model-value="updateStartTime(index, $event)" />
+            <v-select
+              v-if="!isRehab(service.profession)"
+              :model-value="service.billingCategory"
+              label="算定区分（必須）"
+              :items="careNursingBillingCategoryOptions"
+              item-title="title"
+              item-value="value"
+              @update:model-value="updateBillingCategory(index, $event)"
+            />
+            <v-select
+              v-else
+              :model-value="service.rehabDurationMinutes"
+              label="リハビリ時間（必須）"
+              :items="rehabDurationOptions"
+              item-title="title"
+              item-value="value"
+              @update:model-value="updateRehabDuration(index, $event)"
+            />
           </div>
-          <v-select
-            v-if="!isRehab(service.profession)"
-            :model-value="service.billingCategory"
-            class="billing-category-select"
-            label="算定区分（必須）"
-            :items="careNursingBillingCategoryOptions"
-            item-title="title"
-            item-value="value"
-            hint="訪問時刻とは別に、実際に算定する区分を選択してください。"
-            persistent-hint
-            @update:model-value="updateBillingCategory(index, $event)"
-          />
           <v-checkbox v-model="service.unplannedEmergency" label="計画外の緊急訪問" hide-details class="mt-n2" />
           <v-alert v-if="previews[index].error" type="error" variant="tonal" density="compact">{{ previews[index].error }}</v-alert>
           <div v-else class="preview-grid">
+            <div><span>終了時刻（自動）</span><strong>{{ endTimeLabel(index) }}</strong></div>
             <div><span>訪問時間</span><strong>{{ previews[index].durationMinutes }}分</strong></div>
-            <div><span>算定区分</span><strong>{{ selectedCategoryLabel(service, previews[index].durationMinutes) }}</strong></div>
             <div><span>開始時間帯</span><strong>{{ startZoneLabel(service.startTime) }}</strong></div>
             <div><span>時間帯内訳</span><strong>{{ breakdownLabel(previews[index].breakdown) }}</strong></div>
           </div>
           <v-alert v-if="previews[index].timeZoneType === 'mixed'" type="warning" variant="tonal" density="compact" class="mt-3">
             複数の時間帯にまたがっています。時間帯加算は開始時刻で判定します。
-          </v-alert>
-          <v-alert v-if="isRehab(service.profession) && previews[index].durationMinutes % 20 !== 0" type="warning" variant="tonal" density="compact" class="mt-3">
-            20分に満たない端数時間は算定回数に含めません。
-          </v-alert>
-          <v-alert v-if="billingCategoryMismatch(service, previews[index].durationMinutes)" type="warning" variant="tonal" density="compact" class="mt-3">
-            訪問時間{{ previews[index].durationMinutes }}分に対して「{{ nursingBillingCategoryLabel(service.billingCategory!) }}」が選択されています。実績時間と算定区分を確認してください。
           </v-alert>
         </section>
 
@@ -158,16 +156,16 @@ import type {
   CareProfession,
   CareServiceEntry,
   CareServiceEntryInput,
-  EndDayType,
   TimeZoneBreakdown
 } from "../../shared/types";
 import {
   careNursingBillingCategoryOptions,
+  deriveCareEndTime,
   isCareNursingBillingCategory,
   nursingBillingCategoryForDuration,
-  nursingBillingCategoryLabel
+  nursingDurationForBillingCategory
 } from "../../shared/careBilling";
-import { careProfessionOptions, endDayOptions, timeOptions } from "../utils/careOptions";
+import { careProfessionOptions, timeOptions } from "../utils/careOptions";
 import { calendarWeeksInMonth, daysInMonth, weekdayLabel } from "../utils/date";
 import { previewTime } from "../utils/timePreview";
 
@@ -189,7 +187,6 @@ const emit = defineEmits<{
 }>();
 
 const form = ref<CareServiceEntryInput[]>([]);
-const billingCategoryTouched = ref<boolean[]>([]);
 const error = ref("");
 const confirmDelete = ref(false);
 const confirmCopy = ref(false);
@@ -199,6 +196,10 @@ const selectedCopyDates = ref<string[]>([]);
 const pendingTargetDates = ref<string[]>([]);
 const pendingServices = ref<CareServiceEntryInput[]>([]);
 const times = timeOptions();
+const rehabDurationOptions = [
+  { title: "20分（1回）", value: 20 },
+  { title: "40分（2回）", value: 40 }
+] as const;
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 
 const displayDate = computed(() => formatJapaneseDate(props.visitDate, false));
@@ -207,7 +208,16 @@ const targetMonthLabel = computed(() => {
   return `${year}年${Number(month)}月`;
 });
 const hasExisting = computed(() => props.services.length > 0);
-const previews = computed(() => form.value.map((item) => previewTime(item.startTime, item.endTime, item.endDayType)));
+const derivedTimings = computed(() => form.value.map((item) => {
+  const durationMinutes = isRehab(item.profession)
+    ? item.rehabDurationMinutes ?? 20
+    : nursingDurationForBillingCategory(item.billingCategory ?? "under_30");
+  return { durationMinutes, ...deriveCareEndTime(item.startTime, durationMinutes) };
+}));
+const previews = computed(() => form.value.map((item, index) => {
+  const timing = derivedTimings.value[index];
+  return previewTime(item.startTime, timing.endTime, timing.endDayType);
+}));
 const existingDateSet = computed(() => new Set(props.existingVisitDates));
 const copyCalendarWeeks = computed(() => calendarWeeksInMonth(props.targetMonth));
 const sourceWeekday = computed(() => {
@@ -234,9 +244,6 @@ watch(
   (value) => {
     if (!value) return;
     form.value = props.services.length ? props.services.map(toInput) : [defaultService(1)];
-    billingCategoryTouched.value = props.services.length
-      ? props.services.map((service) => !isRehab(service.profession))
-      : [false];
     error.value = "";
     confirmDelete.value = false;
     confirmCopy.value = false;
@@ -254,12 +261,10 @@ function toInput(service: CareServiceEntry): CareServiceEntryInput {
     sequence: service.sequence,
     profession: service.profession,
     startTime: service.startTime,
-    endTime: service.endTime,
-    endDayType: service.endDayType,
     unplannedEmergency: service.unplannedEmergency,
     ...(isRehab(service.profession)
-      ? {}
-      : { billingCategory: isCareNursingBillingCategory(service.serviceCategory) ? service.serviceCategory : "under_90" })
+      ? { rehabDurationMinutes: service.durationMinutes >= 40 ? 40 : 20 }
+      : { billingCategory: nursingBillingCategoryForDuration(service.durationMinutes) })
   };
 }
 
@@ -268,21 +273,17 @@ function defaultService(sequence: number): CareServiceEntryInput {
     sequence,
     profession: "nurse",
     startTime: "09:00",
-    endTime: "09:30",
-    endDayType: "same_day",
     unplannedEmergency: false,
-    billingCategory: "under_60"
+    billingCategory: "under_30"
   };
 }
 
 function add(): void {
   form.value.push(defaultService(form.value.length + 1));
-  billingCategoryTouched.value.push(false);
 }
 
 function remove(index: number): void {
   form.value.splice(index, 1);
-  billingCategoryTouched.value.splice(index, 1);
   form.value.forEach((item, itemIndex) => { item.sequence = itemIndex + 1; });
 }
 
@@ -290,33 +291,27 @@ function updateProfession(index: number, profession: CareProfession): void {
   const service = form.value[index];
   const wasRehab = isRehab(service.profession);
   service.profession = profession;
-  if (!isRehab(profession) && wasRehab) {
-    billingCategoryTouched.value[index] = false;
-    syncSuggestedBillingCategory(index);
+  if (isRehab(profession) && !wasRehab) {
+    delete service.billingCategory;
+    service.rehabDurationMinutes = 20;
+  } else if (!isRehab(profession) && wasRehab) {
+    delete service.rehabDurationMinutes;
+    service.billingCategory = "under_30";
   }
 }
 
-function updateTime(index: number, field: "startTime" | "endTime", value: string): void {
-  form.value[index][field] = value;
-  syncSuggestedBillingCategory(index);
-}
-
-function updateEndDayType(index: number, value: EndDayType): void {
-  form.value[index].endDayType = value;
-  syncSuggestedBillingCategory(index);
+function updateStartTime(index: number, value: string): void {
+  form.value[index].startTime = value;
 }
 
 function updateBillingCategory(index: number, value: CareNursingBillingCategory): void {
   if (!isCareNursingBillingCategory(value)) return;
   form.value[index].billingCategory = value;
-  billingCategoryTouched.value[index] = true;
 }
 
-function syncSuggestedBillingCategory(index: number): void {
-  const service = form.value[index];
-  if (!service || isRehab(service.profession) || billingCategoryTouched.value[index]) return;
-  const preview = previewTime(service.startTime, service.endTime, service.endDayType);
-  if (!preview.error) service.billingCategory = nursingBillingCategoryForDuration(preview.durationMinutes);
+function updateRehabDuration(index: number, value: number): void {
+  if (value !== 20 && value !== 40) return;
+  form.value[index].rehabDurationMinutes = value;
 }
 
 function close(): void {
@@ -357,20 +352,14 @@ function buildSavableServices(): CareServiceEntryInput[] | null {
     error.value = invalid.error;
     return null;
   }
-  if (form.value.some((item, index) => isRehab(item.profession) && previews.value[index].durationMinutes < 20)) {
-    error.value = "リハビリ専門職の訪問は20分以上で入力してください。";
-    return null;
-  }
   return form.value.map((item, index) => ({
     sequence: index + 1,
     profession: item.profession,
     startTime: item.startTime,
-    endTime: item.endTime,
-    endDayType: item.endDayType,
     unplannedEmergency: item.unplannedEmergency,
     ...(isRehab(item.profession)
-      ? {}
-      : { billingCategory: item.billingCategory ?? nursingBillingCategoryForDuration(previews.value[index].durationMinutes) })
+      ? { rehabDurationMinutes: item.rehabDurationMinutes ?? 20 }
+      : { billingCategory: item.billingCategory ?? "under_30" })
   }));
 }
 
@@ -430,13 +419,11 @@ function isRehab(value: CareProfession): boolean {
   return ["physical_therapist", "occupational_therapist", "speech_therapist"].includes(value);
 }
 
-function selectedCategoryLabel(service: CareServiceEntryInput, minutes: number): string {
-  if (isRehab(service.profession)) return `${Math.floor(minutes / 20)}回（20分単位）`;
-  return nursingBillingCategoryLabel(service.billingCategory ?? nursingBillingCategoryForDuration(minutes));
-}
-
-function billingCategoryMismatch(service: CareServiceEntryInput, minutes: number): boolean {
-  return !isRehab(service.profession) && Boolean(service.billingCategory) && service.billingCategory !== nursingBillingCategoryForDuration(minutes);
+function endTimeLabel(index: number): string {
+  const timing = derivedTimings.value[index];
+  if (!timing) return "－";
+  const time = `${Number(timing.endTime.slice(0, 2))}:${timing.endTime.slice(3)}`;
+  return timing.endDayType === "next_day" ? `翌日 ${time}` : time;
 }
 
 function startZoneLabel(time: string): string {
@@ -455,8 +442,7 @@ function breakdownLabel(value: TimeZoneBreakdown[]): string {
 
 <style scoped>
 .service-card{border:1px solid #b7ccc7;border-radius:12px;padding:18px;background:#fbfefd}
-.service-grid{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:12px}
-.billing-category-select{max-width:430px}
+.service-grid{display:grid;grid-template-columns:1.2fr 1fr 1.5fr;gap:12px}
 .preview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px;border-radius:8px;background:#eaf5f2}
 .preview-grid span{display:block;font-size:12px;color:#55736d}
 .preview-grid strong{display:block;margin-top:3px}

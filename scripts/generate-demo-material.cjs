@@ -289,25 +289,24 @@ function seedCareDemoData(repository) {
     rehabFacilityReduction: false
   });
 
-  repository.saveDay(saved.id, "2026-07-03", [careService("nurse", "10:00", "10:25")]);
-  repository.saveDay(saved.id, "2026-07-07", [careService("physical_therapist", "10:00", "10:45")]);
+  repository.saveDay(saved.id, "2026-07-03", [careService("nurse", "10:00", "under_30")]);
+  repository.saveDay(saved.id, "2026-07-07", [careService("physical_therapist", "10:00", 40)]);
   repository.saveDay(saved.id, "2026-07-15", [
-    careService("nurse", "09:00", "09:30", 1, "under_30"),
-    careService("occupational_therapist", "10:00", "10:40", 2)
+    careService("nurse", "09:00", "under_30", 1),
+    careService("occupational_therapist", "10:00", 40, 2)
   ]);
-  repository.saveDay(saved.id, "2026-07-21", [careService("assistant_nurse", "18:00", "18:25")]);
-  repository.saveDay(saved.id, "2026-07-28", [careService("nurse", "22:00", "22:30")]);
+  repository.saveDay(saved.id, "2026-07-21", [careService("assistant_nurse", "18:00", "under_30")]);
+  repository.saveDay(saved.id, "2026-07-28", [careService("nurse", "22:00", "under_30")]);
 }
 
-function careService(profession, startTime, endTime, sequence = 1, billingCategory) {
+function careService(profession, startTime, categoryOrDuration, sequence = 1) {
+  const rehab = ["physical_therapist", "occupational_therapist", "speech_therapist"].includes(profession);
   return {
     sequence,
     profession,
     startTime,
-    endTime,
-    endDayType: "same_day",
     unplannedEmergency: false,
-    ...(billingCategory ? { billingCategory } : {})
+    ...(rehab ? { rehabDurationMinutes: categoryOrDuration } : { billingCategory: categoryOrDuration })
   };
 }
 

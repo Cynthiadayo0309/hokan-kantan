@@ -44,7 +44,10 @@
               <button v-for="(day,dayIndex) in week" :key="day.dateKey||`blank-${weekIndex}-${dayIndex}`" type="button" :disabled="!day.date" :class="dayClass(day.date)" @click="day.date&&openDay(day.dateKey)">
                 <template v-if="day.date">
                   <div class="day-number"><strong>{{ day.date.getDate() }}</strong><span>{{ weekdayLabel(day.date) }}</span></div><div v-if="dayMap.get(day.dateKey)" class="day-summary">
-                    <div v-for="service in dayMap.get(day.dateKey)?.services.slice(0,3)" :key="service.id"><strong>{{ careProfessionLabels[service.profession] }}</strong> {{ service.startTime }}～{{ service.endTime }}</div>
+                    <div v-for="service in dayMap.get(day.dateKey)?.services.slice(0,3)" :key="service.id">
+                      <strong>{{ careProfessionLabels[service.profession] }}</strong> {{ service.startTime }}～{{ service.endTime }}<br>
+                      <span>{{ serviceCategorySummary(service) }}</span>
+                    </div>
                     <div v-if="(dayMap.get(day.dateKey)?.services.length||0)>3">ほか{{ (dayMap.get(day.dateKey)?.services.length||0)-3 }}件</div>
                     <v-chip size="x-small" color="primary" variant="tonal">{{ dayMap.get(day.dateKey)?.services.length }}件登録</v-chip>
                   </div><div v-else class="empty-day">クリックして登録</div>
@@ -79,6 +82,7 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import type { CareEstimateInput, CareServiceEntry, CareServiceEntryInput } from "../../shared/types";
+import { nursingBillingCategoryLabel } from "../../shared/careBilling";
 import CareDailyServiceDialog from "../components/CareDailyServiceDialog.vue";
 import { useCareEstimateStore } from "../stores/careEstimateStore";
 import { calendarWeeksInMonth, formatMonth, isHoliday, isToday, isWeekend, weekdayLabel } from "../utils/date";
@@ -102,6 +106,7 @@ async function reset(){confirmReset.value=false;await store.reset()}
 async function calculate(){if(!form.patientName.trim()){store.error="利用者名を入力してください。";return}if(!store.estimate?.serviceDays.some(day=>day.visitDate.startsWith(`${form.targetMonth}-`))){store.error="対象月の訪問サービスを1日以上登録してください。";return}try{await saveHeader();await store.calculate();await router.push({name:"care-cost-detail"})}catch(error){store.error=error instanceof Error?error.message:"計算に失敗しました。"}}
 function dayClass(date:Date|null){if(!date)return["calendar-day","blank"];return["calendar-day",date.getDay()===0||isHoliday(date)?"sunday":date.getDay()===6?"saturday":"",isToday(date)?"is-today":"",dayMap.value.has(dateToKey(date))?"has-data":"",isWeekend(date)?"weekend":""]}
 function dateToKey(date:Date){return`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`}
+function serviceCategorySummary(service:CareServiceEntry){return service.serviceCategory==="rehab"?`リハビリ${service.durationMinutes}分`:nursingBillingCategoryLabel(service.serviceCategory)}
 </script>
 
 <style scoped>

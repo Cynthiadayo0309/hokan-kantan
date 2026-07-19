@@ -149,7 +149,7 @@ export class CareMonthlyEstimateCalculator {
       warnings.push(`${formatDate(visitDate)} 初回の計画外緊急訪問は夜間・早朝・深夜加算の対象外です。`);
     }
 
-    if (!rehab && service.durationMinutes >= 90) {
+    if (!rehab && service.serviceCategory === "long") {
       if (estimate.specialManagementAddition === "none") {
         warnings.push(`${formatDate(visitDate)} 90分以上の訪問ですが、特別管理加算が未選択のため長時間訪問看護加算を含めません。`);
       } else {

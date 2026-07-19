@@ -170,13 +170,15 @@ export class CareEstimateRepository {
   }
 
   private mapService(row: Record<string, unknown>): CareServiceEntry {
-    return {
-      id: Number(row.id), sequence: Number(row.sequence), profession: row.profession as CareServiceEntry["profession"],
-      startTime: String(row.start_time), endTime: String(row.end_time), endDayType: row.end_day_type as CareServiceEntry["endDayType"],
-      unplannedEmergency: Boolean(row.unplanned_emergency), durationMinutes: Number(row.duration_minutes),
-      serviceCategory: row.service_category as CareServiceEntry["serviceCategory"], timeZoneType: row.time_zone_type as CareServiceEntry["timeZoneType"],
-      timeZoneBreakdown: JSON.parse(String(row.time_zone_breakdown_json)), warnings: JSON.parse(String(row.warnings_json))
-    };
+    const [normalized] = CareDailyServiceCalculator.normalize([{
+      sequence: Number(row.sequence),
+      profession: row.profession as CareServiceEntry["profession"],
+      startTime: String(row.start_time),
+      endTime: String(row.end_time),
+      endDayType: row.end_day_type as CareServiceEntry["endDayType"],
+      unplannedEmergency: Boolean(row.unplanned_emergency)
+    }]);
+    return { ...normalized, id: Number(row.id), sequence: Number(row.sequence) };
   }
 
   private validateEstimate(input: CareEstimateInput): void {

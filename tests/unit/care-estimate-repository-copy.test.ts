@@ -12,8 +12,8 @@ describe("normalizeCareServiceDays", () => {
 
     expect(days.map((day) => day.visitDate)).toEqual(["2026-07-08", "2026-07-15", "2026-07-22"]);
     expect(days.every((day) => day.services.length === 2)).toBe(true);
-    expect(days[0].services[0]).toMatchObject({ durationMinutes: 30, serviceCategory: "under_30" });
-    expect(days[0].services[0].warnings).toContain("訪問時間30分に対して「30分未満」が選択されています。実績時間と算定区分を確認してください。");
+    expect(days[0].services[0]).toMatchObject({ durationMinutes: 29, endTime: "09:29", serviceCategory: "under_30" });
+    expect(days[0].services[0].warnings).toEqual([]);
     expect(days[0].services[1]).toMatchObject({ profession: "physical_therapist", durationMinutes: 40, serviceCategory: "rehab", unplannedEmergency: true });
   });
 
@@ -34,7 +34,7 @@ describe("normalizeCareServiceDays", () => {
   it("rejects the whole batch when a later day has an invalid service", () => {
     const days = [
       { visitDate: "2026-07-01", services: [service()] },
-      { visitDate: "2026-07-02", services: [service({ startTime: "10:00", endTime: "10:00" })] }
+      { visitDate: "2026-07-02", services: [service({ billingCategory: undefined })] }
     ];
 
     expect(() => normalizeCareServiceDays("2026-07", days)).toThrow();
@@ -44,7 +44,7 @@ describe("normalizeCareServiceDays", () => {
 function copiedServices(): CareServiceEntryInput[] {
   return [
     service({ billingCategory: "under_30" }),
-    service({ sequence: 2, profession: "physical_therapist", startTime: "10:00", endTime: "10:40", unplannedEmergency: true })
+    service({ sequence: 2, profession: "physical_therapist", startTime: "10:00", billingCategory: undefined, rehabDurationMinutes: 40, unplannedEmergency: true })
   ];
 }
 
@@ -53,9 +53,8 @@ function service(overrides: Partial<CareServiceEntryInput> = {}): CareServiceEnt
     sequence: 1,
     profession: "nurse",
     startTime: "09:00",
-    endTime: "09:30",
-    endDayType: "same_day",
     unplannedEmergency: false,
+    billingCategory: "under_30",
     ...overrides
   };
 }

@@ -36,15 +36,25 @@ describe("CareMonthlyEstimateCalculator", () => {
     expect(calculate(estimate).totals.totalUnits).toBe(451);
   });
 
-  it("30分ちょうどでも選択した30分未満の単位を優先する", () => {
+  it("新形式の30分未満は29分として要介護471単位・要支援451単位を使用する", () => {
+    const entry = service({ endTime: undefined, endDayType: undefined, billingCategory: "under_30" });
+    expect(entry).toMatchObject({ durationMinutes: 29, endTime: "10:29", serviceCategory: "under_30" });
+    expect(calculate(estimateWith([day("2026-07-10", entry)])).totals.totalUnits).toBe(471);
+
+    const support = estimateWith([day("2026-07-10", entry)]);
+    support.careClassification = "support";
+    expect(calculate(support).totals.totalUnits).toBe(451);
+  });
+
+  it("旧形式の30分ちょうどは保存済み区分にかかわらず1時間未満として計算する", () => {
     const care = estimateWith([day("2026-07-10", service({ startTime: "10:00", endTime: "10:30", billingCategory: "under_30" }))]);
     const careResult = calculate(care);
-    expect(careResult.totals.totalUnits).toBe(471);
-    expect(careResult.warnings).toContain("7月10日 訪問時間30分に対して「30分未満」が選択されています。実績時間と算定区分を確認してください。");
+    expect(careResult.totals.totalUnits).toBe(823);
+    expect(careResult.warnings).not.toContain(expect.stringContaining("実績時間と算定区分"));
 
     const support = estimateWith(care.serviceDays);
     support.careClassification = "support";
-    expect(calculate(support).totals.totalUnits).toBe(451);
+    expect(calculate(support).totals.totalUnits).toBe(794);
   });
 
   it.each([
@@ -73,7 +83,16 @@ describe("CareMonthlyEstimateCalculator", () => {
     const entry = service({ profession, startTime: "10:00", endTime: "10:45" });
     const result = calculate(estimateWith([day("2026-07-10", entry)]));
     expect(result.totals.basicUnits).toBe(294 * 2);
-    expect(entry.warnings).toContain("20分に満たない端数時間は算定回数に含めません。");
+    expect(entry.durationMinutes).toBe(40);
+    expect(entry.endTime).toBe("10:40");
+    expect(entry.warnings).toEqual([]);
+  });
+
+  it.each(["physical_therapist", "occupational_therapist", "speech_therapist"] as const)("新形式の%sは20分／40分だけを受け付ける", (profession) => {
+    const twenty = service({ profession, endTime: undefined, endDayType: undefined, billingCategory: undefined, rehabDurationMinutes: 20 });
+    const forty = service({ profession, endTime: undefined, endDayType: undefined, billingCategory: undefined, rehabDurationMinutes: 40 });
+    expect(twenty).toMatchObject({ durationMinutes: 20, endTime: "10:20" });
+    expect(forty).toMatchObject({ durationMinutes: 40, endTime: "10:40" });
   });
 
   it.each([
@@ -103,7 +122,7 @@ describe("CareMonthlyEstimateCalculator", () => {
 
   it("20分未満を選択したサービス自身は週内の20分以上訪問として数えない", () => {
     const result = calculate(estimateWith([
-      day("2026-07-06", service({ startTime: "10:00", endTime: "10:30", billingCategory: "under_20" }))
+      day("2026-07-06", service({ startTime: "10:00", endTime: undefined, endDayType: undefined, billingCategory: "under_20" }))
     ]));
     expect(result.totals.totalUnits).toBe(0);
     expect(result.lines[0].includedInTotal).toBe(false);
@@ -117,8 +136,12 @@ describe("CareMonthlyEstimateCalculator", () => {
     expect(result.totals.deductionUnits).toBe(471 - result.totals.totalUnits);
   });
 
-  it("リハビリ60分を3回として90%算定し、事業所・12か月超減算を適用する", () => {
-    const estimate = estimateWith([day("2026-07-10", service({ profession: "physical_therapist", startTime: "10:00", endTime: "11:00" }))]);
+  it("リハビリ40分と20分を同日3回として90%算定し、事業所・12か月超減算を適用する", () => {
+    const estimate = estimateWith([day(
+      "2026-07-10",
+      service({ profession: "physical_therapist", startTime: "10:00", endTime: undefined, endDayType: undefined, billingCategory: undefined, rehabDurationMinutes: 40 }),
+      service({ profession: "physical_therapist", startTime: "10:40", endTime: undefined, endDayType: undefined, billingCategory: undefined, rehabDurationMinutes: 20 })
+    )]);
     estimate.careClassification = "support";
     estimate.rehabFacilityReduction = true;
     estimate.rehabOver12Months = true;
@@ -179,23 +202,55 @@ describe("CareDailyServiceCalculator", () => {
     ["10:00", "10:20", "under_30"],
     ["10:00", "10:30", "under_60"],
     ["10:00", "11:00", "under_90"],
-    ["10:00", "11:30", "under_90"]
+    ["10:00", "11:30", "long"]
   ] as const)("算定区分未指定の%s～%sは公式境界で%sに分類する", (startTime, endTime, expected) => {
     const [entry] = CareDailyServiceCalculator.normalize([input({ startTime, endTime })]);
     expect(entry.serviceCategory).toBe(expected);
   });
 
-  it("明示した算定区分と実時間が異なる場合も保存し警告する", () => {
+  it("旧形式では明示した算定区分より実時間の公式境界を優先する", () => {
     const [entry] = CareDailyServiceCalculator.normalize([input({ billingCategory: "under_30" })]);
-    expect(entry.serviceCategory).toBe("under_30");
-    expect(entry.warnings).toContain("訪問時間30分に対して「30分未満」が選択されています。実績時間と算定区分を確認してください。");
+    expect(entry.serviceCategory).toBe("under_60");
+    expect(entry.warnings).toEqual([]);
+  });
+
+  it.each([
+    ["under_20", 19, "10:19", "same_day"],
+    ["under_30", 29, "10:29", "same_day"],
+    ["under_60", 59, "10:59", "same_day"],
+    ["under_90", 89, "11:29", "same_day"],
+    ["long", 90, "11:30", "same_day"]
+  ] as const)("新形式の%sは代表時間%d分と終了時刻%sを生成する", (billingCategory, durationMinutes, endTime, endDayType) => {
+    const [entry] = CareDailyServiceCalculator.normalize([input({ endTime: undefined, endDayType: undefined, billingCategory })]);
+    expect(entry).toMatchObject({ billingCategory, serviceCategory: billingCategory, durationMinutes, endTime, endDayType });
+  });
+
+  it("新形式の23時台開始は終了時刻を翌日として生成する", () => {
+    const [entry] = CareDailyServiceCalculator.normalize([input({ startTime: "23:50", endTime: undefined, endDayType: undefined, billingCategory: "under_30" })]);
+    expect(entry).toMatchObject({ durationMinutes: 29, endTime: "00:19", endDayType: "next_day" });
+    expect(entry.timeZoneBreakdown).toEqual([{ zone: "midnight", minutes: 29 }]);
+  });
+
+  it("旧形式のリハビリは20～39分を20分、40分以上を40分へ補正する", () => {
+    const [shortEntry] = CareDailyServiceCalculator.normalize([input({ profession: "physical_therapist", endTime: "10:35", billingCategory: undefined })]);
+    const [longEntry] = CareDailyServiceCalculator.normalize([input({ profession: "physical_therapist", endTime: "11:20", billingCategory: undefined })]);
+    expect(shortEntry).toMatchObject({ durationMinutes: 20, endTime: "10:20", rehabDurationMinutes: 20 });
+    expect(longEntry).toMatchObject({ durationMinutes: 40, endTime: "10:40", rehabDurationMinutes: 40 });
   });
 
   it("同日のサービス時間が重複する場合は保存できない", () => {
     expect(() => CareDailyServiceCalculator.normalize([
-      input({ sequence: 1, startTime: "10:00", endTime: "10:30" }),
-      input({ sequence: 2, profession: "physical_therapist", startTime: "10:20", endTime: "10:40" })
+      input({ sequence: 1, startTime: "10:00", endTime: undefined, endDayType: undefined, billingCategory: "under_30" }),
+      input({ sequence: 2, profession: "physical_therapist", startTime: "10:20", endTime: undefined, endDayType: undefined, billingCategory: undefined, rehabDurationMinutes: 20 })
     ])).toThrow("重複");
+  });
+
+  it("終了と次の開始が同時刻なら重複しない", () => {
+    const entries = CareDailyServiceCalculator.normalize([
+      input({ sequence: 1, startTime: "10:00", endTime: undefined, endDayType: undefined, billingCategory: "under_30" }),
+      input({ sequence: 2, profession: "physical_therapist", startTime: "10:29", endTime: undefined, endDayType: undefined, billingCategory: undefined, rehabDurationMinutes: 20 })
+    ]);
+    expect(entries).toHaveLength(2);
   });
 
   it("翌日終了を含めて時間帯内訳を作成する", () => {

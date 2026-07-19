@@ -308,7 +308,7 @@ export type CareProfession =
   | "occupational_therapist"
   | "speech_therapist";
 export type CareServiceCategory = "under_20" | "under_30" | "under_60" | "under_90" | "long" | "rehab";
-export type CareNursingBillingCategory = "under_20" | "under_30" | "under_60" | "under_90";
+export type CareNursingBillingCategory = "under_20" | "under_30" | "under_60" | "under_90" | "long";
 export type CareLineCategory = "basic" | "addition" | "deduction";
 
 export type CareServiceEntryInput = {
@@ -316,14 +316,19 @@ export type CareServiceEntryInput = {
   sequence: number;
   profession: CareProfession;
   startTime: string;
-  endTime: string;
-  endDayType: EndDayType;
+  /** 旧形式の入力との互換用。新規入力では算定区分から自動計算する。 */
+  endTime?: string;
+  /** 旧形式の入力との互換用。新規入力では算定区分から自動計算する。 */
+  endDayType?: EndDayType;
   unplannedEmergency: boolean;
   billingCategory?: CareNursingBillingCategory;
+  rehabDurationMinutes?: 20 | 40;
 };
 
-export type CareServiceEntry = CareServiceEntryInput & {
+export type CareServiceEntry = Omit<CareServiceEntryInput, "endTime" | "endDayType"> & {
   id: number;
+  endTime: string;
+  endDayType: EndDayType;
   durationMinutes: number;
   serviceCategory: CareServiceCategory;
   timeZoneType: TimeZoneType;
