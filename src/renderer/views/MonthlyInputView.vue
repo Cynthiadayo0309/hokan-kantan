@@ -127,6 +127,9 @@
       <v-alert v-if="form.sameBuildingCategory === 'one'" type="warning" variant="tonal" density="comfortable" class="mt-2">
         1人区分は入力できますが、今回の正式対応範囲は基本療養費（Ⅱ）のみです。基本療養費（Ⅰ）が必要な場合は明細に警告し、合計には含めません。
       </v-alert>
+      <v-alert v-if="form.highCostCareLimitCategory !== 'unset' && form.targetMonth >= '2026-08'" type="info" variant="tonal" density="comfortable" class="mt-2">
+        2026年8月改定の月額上限を使用します。新設された年間上限、世帯合算、多数回該当、他医療機関・薬局分は自動計算しません。
+      </v-alert>
     </section>
 
     <section>

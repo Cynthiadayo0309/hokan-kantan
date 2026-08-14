@@ -3,6 +3,7 @@ import type {
   DailyVisit,
   DailyVisitInput,
   EligibilityRule,
+  HighCostCareLimitRule,
   MonthlyEstimate,
   MonthlyEstimateInput,
   PricingRule,
@@ -195,6 +196,26 @@ export class EstimateRepository {
       errorMessage: row.error_message,
       effectiveFrom: row.effective_from,
       effectiveTo: row.effective_to
+    }));
+  }
+
+  getHighCostCareLimitRules(): HighCostCareLimitRule[] {
+    const rows = this.db.prepare("SELECT * FROM high_cost_care_limit_rules WHERE enabled = 1 ORDER BY effective_from, category").all() as Array<Record<string, any>>;
+    return rows.map((row) => ({
+      id: row.id,
+      ruleCode: row.rule_code,
+      category: row.category,
+      effectiveFrom: row.effective_from,
+      effectiveTo: row.effective_to ?? undefined,
+      fixedAmount: row.fixed_amount,
+      medicalCostThreshold: row.medical_cost_threshold ?? undefined,
+      excessRate: row.excess_rate,
+      annualLimitAmount: row.annual_limit_amount ?? undefined,
+      outpatientAnnualLimitAmount: row.outpatient_annual_limit_amount ?? undefined,
+      versionLabel: row.version_label,
+      sourceNote: row.source_note,
+      sourceUrl: row.source_url,
+      enabled: row.enabled === 1
     }));
   }
 

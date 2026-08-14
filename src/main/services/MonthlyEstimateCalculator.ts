@@ -3,6 +3,7 @@ import type {
   CalculationLine,
   CalculationTotals,
   DailyVisit,
+  HighCostCareLimitRule,
   MonthlyCalculationPeriodResult,
   MonthlyCalculationResult,
   MonthlyEstimate,
@@ -13,12 +14,15 @@ import type {
 import { labels } from "../../shared/types";
 import { calculateCopayment } from "./CopaymentCalculator";
 import { EligibilityEvaluator, professionCategoryFor } from "./EligibilityEvaluator";
-import { calculateHighCostCareLimit, shouldWarnHighCostCareLimitRevision } from "./HighCostCareLimitCalculator";
+import { HIGH_COST_CARE_SCOPE_NOTICE, calculateHighCostCareLimit, shouldShowAnnualLimitNotice } from "./HighCostCareLimitCalculator";
 import { PricingRuleResolver } from "./PricingRuleResolver";
 import { countEligibleBeforeOrOn, monthlyVisitDayOrdinal, weeklyEligibleOrdinal, weeklyVisitDayOrdinal } from "./VisitDayCounters";
 
 export class MonthlyEstimateCalculator {
-  constructor(private readonly rules: PricingRule[]) {}
+  constructor(
+    private readonly rules: PricingRule[],
+    private readonly highCostCareLimitRules: HighCostCareLimitRule[] = []
+  ) {}
 
   calculate(estimate: MonthlyEstimate, period?: { startDate?: string; endDate?: string }): MonthlyCalculationResult {
     const defaultStart = `${estimate.targetMonth}-01`;
@@ -48,6 +52,9 @@ export class MonthlyEstimateCalculator {
       totals: rangeTotal,
       warnings: Array.from(new Set(monthlyResults.flatMap((result) => result.warnings))),
       usesSamplePricing: monthlyResults.some((result) => result.usesSamplePricing),
+      highCostCareLimitRuleLabel: Array.from(
+        new Set(monthlyResults.map((result) => result.highCostCareLimitRuleLabel).filter((label): label is string => Boolean(label)))
+      ).join(" / ") || undefined,
       monthlyResults,
       rangeTotal
     };
@@ -89,10 +96,19 @@ export class MonthlyEstimateCalculator {
     const additions = included.filter((line) => line.category === "addition").reduce((sum, line) => sum + line.subtotal, 0);
     const grandTotal = basic + management + additions;
     const copaymentAmountBeforeLimit = calculateCopayment(grandTotal, estimate.copaymentRate);
-    const highCostLimit = calculateHighCostCareLimit(grandTotal, copaymentAmountBeforeLimit, estimate.highCostCareLimitCategory);
+    const highCostLimit = calculateHighCostCareLimit(
+      grandTotal,
+      copaymentAmountBeforeLimit,
+      estimate.highCostCareLimitCategory,
+      estimate.targetMonth,
+      this.highCostCareLimitRules
+    );
     const copaymentAmount = highCostLimit.appliedAmount ?? copaymentAmountBeforeLimit;
-    if (shouldWarnHighCostCareLimitRevision(estimate.targetMonth, estimate.highCostCareLimitCategory)) {
-      warnings.push("2026年8月以降は高額療養費制度の見直し予定があります。自己負担限度額を確認してください。");
+    if (highCostLimit.warning) {
+      warnings.push(highCostLimit.warning);
+    }
+    if (shouldShowAnnualLimitNotice(estimate.targetMonth, estimate.highCostCareLimitCategory)) {
+      warnings.push(HIGH_COST_CARE_SCOPE_NOTICE);
     }
 
     return {
@@ -112,7 +128,8 @@ export class MonthlyEstimateCalculator {
         highCostCareLimitApplied: highCostLimit.applied
       },
       warnings: Array.from(new Set(warnings)),
-      usesSamplePricing
+      usesSamplePricing,
+      highCostCareLimitRuleLabel: highCostLimit.ruleLabel
     };
   }
 

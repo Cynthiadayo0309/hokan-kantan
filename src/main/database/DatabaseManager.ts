@@ -7,6 +7,7 @@ const INITIAL_MIGRATION_ID = "001_initial_schema";
 const FORMAL_PRICING_MIGRATION_ID = "002_formal_pricing";
 const HIGH_COST_CARE_LIMIT_MIGRATION_ID = "003_high_cost_care_limit";
 const CARE_INSURANCE_MIGRATION_ID = "004_care_insurance";
+const HIGH_COST_CARE_LIMIT_RULES_MIGRATION_ID = "005_high_cost_care_limit_rules";
 
 export class DatabaseManager {
   private db?: Database.Database;
@@ -32,7 +33,8 @@ export class DatabaseManager {
       !this.hasMigration(INITIAL_MIGRATION_ID) ||
       !this.hasMigration(FORMAL_PRICING_MIGRATION_ID) ||
       !this.hasMigration(HIGH_COST_CARE_LIMIT_MIGRATION_ID) ||
-      !this.hasMigration(CARE_INSURANCE_MIGRATION_ID);
+      !this.hasMigration(CARE_INSURANCE_MIGRATION_ID) ||
+      !this.hasMigration(HIGH_COST_CARE_LIMIT_RULES_MIGRATION_ID);
     if (existed && hasPendingMigration) {
       this.backupDatabase(dbPath);
     }
@@ -41,9 +43,11 @@ export class DatabaseManager {
     this.runFormalPricingMigration();
     this.runHighCostCareLimitMigration();
     this.runCareInsuranceMigration();
+    this.runHighCostCareLimitRulesMigration();
     this.seedSamplePricingRules();
     this.seedFormalPricingRules();
     this.seedCarePricingRules();
+    this.seedHighCostCareLimitRules();
     return this.db;
   }
 
@@ -343,6 +347,36 @@ export class DatabaseManager {
     migrate();
   }
 
+  private runHighCostCareLimitRulesMigration(): void {
+    if (this.hasMigration(HIGH_COST_CARE_LIMIT_RULES_MIGRATION_ID)) {
+      return;
+    }
+
+    const migrate = this.connection.transaction(() => {
+      this.connection.exec(`
+        CREATE TABLE IF NOT EXISTS high_cost_care_limit_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          rule_code TEXT NOT NULL UNIQUE,
+          category TEXT NOT NULL,
+          effective_from TEXT NOT NULL,
+          effective_to TEXT,
+          fixed_amount INTEGER NOT NULL,
+          medical_cost_threshold INTEGER,
+          excess_rate REAL NOT NULL DEFAULT 0,
+          annual_limit_amount INTEGER,
+          outpatient_annual_limit_amount INTEGER,
+          version_label TEXT NOT NULL,
+          source_note TEXT NOT NULL,
+          source_url TEXT NOT NULL,
+          enabled INTEGER NOT NULL DEFAULT 1
+        );
+      `);
+      this.markMigrationApplied(HIGH_COST_CARE_LIMIT_RULES_MIGRATION_ID);
+    });
+
+    migrate();
+  }
+
   private seedSamplePricingRules(): void {
     const count = this.connection.prepare("SELECT COUNT(*) as count FROM pricing_rules").get() as { count: number };
     if (count.count > 0) {
@@ -436,6 +470,54 @@ export class DatabaseManager {
       }
       for (const rate of pricing.regionalRates) {
         upsertRate.run(rate.grade, rate.unitPrice, regionalRateSource);
+      }
+    });
+    transaction();
+  }
+
+  private seedHighCostCareLimitRules(): void {
+    const pricingPath = this.resolvePricingPath("high-cost-care-limit-rules.json");
+    const rules = JSON.parse(readFileSync(pricingPath, "utf-8")) as Array<Record<string, string | number | null>>;
+    const upsert = this.connection.prepare(`
+      INSERT INTO high_cost_care_limit_rules (
+        rule_code, category, effective_from, effective_to, fixed_amount,
+        medical_cost_threshold, excess_rate, annual_limit_amount,
+        outpatient_annual_limit_amount, version_label, source_note, source_url, enabled
+      ) VALUES (
+        @ruleCode, @category, @effectiveFrom, @effectiveTo, @fixedAmount,
+        @medicalCostThreshold, @excessRate, @annualLimitAmount,
+        @outpatientAnnualLimitAmount, @versionLabel, @sourceNote, @sourceUrl, 1
+      )
+      ON CONFLICT(rule_code) DO UPDATE SET
+        category = excluded.category,
+        effective_from = excluded.effective_from,
+        effective_to = excluded.effective_to,
+        fixed_amount = excluded.fixed_amount,
+        medical_cost_threshold = excluded.medical_cost_threshold,
+        excess_rate = excluded.excess_rate,
+        annual_limit_amount = excluded.annual_limit_amount,
+        outpatient_annual_limit_amount = excluded.outpatient_annual_limit_amount,
+        version_label = excluded.version_label,
+        source_note = excluded.source_note,
+        source_url = excluded.source_url,
+        enabled = 1
+    `);
+    const transaction = this.connection.transaction(() => {
+      for (const rule of rules) {
+        upsert.run({
+          ruleCode: rule.ruleCode,
+          category: rule.category,
+          effectiveFrom: rule.effectiveFrom,
+          effectiveTo: rule.effectiveTo ?? null,
+          fixedAmount: rule.fixedAmount,
+          medicalCostThreshold: rule.medicalCostThreshold ?? null,
+          excessRate: rule.excessRate,
+          annualLimitAmount: rule.annualLimitAmount ?? null,
+          outpatientAnnualLimitAmount: rule.outpatientAnnualLimitAmount ?? null,
+          versionLabel: rule.versionLabel,
+          sourceNote: rule.sourceNote,
+          sourceUrl: rule.sourceUrl
+        });
       }
     });
     transaction();

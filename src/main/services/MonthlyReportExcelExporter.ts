@@ -41,13 +41,16 @@ function addSummarySheet(workbook: ExcelJS.Workbook, data: MonthlyReportData): v
     { label: "管理療養費用人数区分", value: labels.singleBuildingResidentCategory[estimate.singleBuildingResidentCategory] },
     { label: "特別管理加算", value: labels.specialManagementCategory[estimate.specialManagementCategory] },
     { label: "高額療養費自己負担限度額", value: labels.highCostCareLimitCategory[estimate.highCostCareLimitCategory] },
+    ...(calculation.highCostCareLimitRuleLabel ? [{ label: "高額療養費の適用制度", value: calculation.highCostCareLimitRuleLabel }] : []),
     { label: "訪問看護基本療養費合計", value: calculation.totals.basic },
     { label: "訪問看護管理療養費合計", value: calculation.totals.management },
     { label: "各種加算合計", value: calculation.totals.additions },
     { label: "月額費用総額", value: calculation.totals.grandTotal },
     ...(calculation.totals.copaymentAmountBeforeLimit !== undefined ? [{ label: "上限適用前の利用者負担額", value: calculation.totals.copaymentAmountBeforeLimit }] : []),
     ...(calculation.totals.highCostCareLimitAmount !== undefined ? [{ label: "高額療養費自己負担限度額", value: calculation.totals.highCostCareLimitAmount }] : []),
-    ...(calculation.totals.copaymentAmount !== undefined ? [{ label: "利用者負担額の概算", value: calculation.totals.copaymentAmount }] : [])
+    ...(calculation.totals.copaymentAmount !== undefined
+      ? [{ label: calculation.totals.highCostCareLimitAmount !== undefined ? "高額療養費を反映した利用者負担額の概算" : "利用者負担額の概算", value: calculation.totals.copaymentAmount }]
+      : [])
   ]);
   styleHeader(sheet);
   sheet.getColumn("value").numFmt = '#,##0"円"';

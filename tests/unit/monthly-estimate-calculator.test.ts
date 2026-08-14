@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import formalPricing from "../../resources/pricing/formal-pricing.json";
+import highCostCarePricing from "../../resources/pricing/high-cost-care-limit-rules.json";
 import { roundCopaymentToTenYen } from "../../src/main/services/CopaymentCalculator";
 import { MonthlyEstimateCalculator } from "../../src/main/services/MonthlyEstimateCalculator";
 import type {
   DailyVisit,
+  HighCostCareLimitRule,
   MonthlyEstimate,
   PricingCategory,
   PricingRule,
@@ -12,6 +14,7 @@ import type {
 } from "../../src/shared/types";
 
 const rules = formalPricing.map((item, index) => toPricingRule(item, index + 1));
+const highCostCareLimitRules = highCostCarePricing.map((item, index) => toHighCostCareLimitRule(item, index + 1));
 
 describe("MonthlyEstimateCalculator formal pricing", () => {
   it("calculates basic fee II for nurse, 2 people, third and fourth weekly visit days", () => {
@@ -262,14 +265,38 @@ describe("MonthlyEstimateCalculator formal pricing", () => {
     expect(result.totals.copaymentAmount).toBeUndefined();
   });
 
-  it("warns that high cost care limit needs confirmation from August 2026", () => {
-    const result = calculate(estimate({ targetMonth: "2026-08", copaymentRate: "10", highCostCareLimitCategory: "general" }));
+  it("uses the August 2026 revised high cost care limit and shows its scope", () => {
+    const result = calculate(
+      estimate({
+        targetMonth: "2026-08",
+        copaymentRate: "30",
+        highCostCareLimitCategory: "general",
+        dailyVisits: Array.from({ length: 25 }, (_, index) => visit({ visitDate: `2026-08-${String(index + 1).padStart(2, "0")}` }))
+      })
+    );
 
-    expect(result.warnings.some((warning) => warning.includes("高額療養費制度の見直し予定"))).toBe(true);
+    expect(result.totals.highCostCareLimitAmount).toBe(22000);
+    expect(result.highCostCareLimitRuleLabel).toBe("2026年8月改定");
+    expect(result.warnings.some((warning) => warning.includes("年間上限"))).toBe(true);
+    expect(result.warnings.some((warning) => warning.includes("見直し予定"))).toBe(false);
+  });
+
+  it("does not apply an unknown high cost care rule after July 2027", () => {
+    const result = calculate(
+      estimate({
+        targetMonth: "2027-08",
+        copaymentRate: "30",
+        highCostCareLimitCategory: "general",
+        dailyVisits: [visit({ visitDate: "2027-08-10" })]
+      })
+    );
+
+    expect(result.totals.highCostCareLimitAmount).toBeUndefined();
+    expect(result.warnings.some((warning) => warning.includes("制度ルールが見つからない"))).toBe(true);
   });
 
   it("calculates cross-month periods by month and totals the selected range", () => {
-    const result = new MonthlyEstimateCalculator(rules).calculate(
+    const result = new MonthlyEstimateCalculator(rules, highCostCareLimitRules).calculate(
       estimate({
         dailyVisits: [
           visit({ visitDate: "2026-06-14", managementFeeApplicable: "applicable" }),
@@ -293,7 +320,7 @@ describe("MonthlyEstimateCalculator formal pricing", () => {
 });
 
 function calculate(estimateValue: MonthlyEstimate) {
-  return new MonthlyEstimateCalculator(rules).calculate(estimateValue);
+  return new MonthlyEstimateCalculator(rules, highCostCareLimitRules).calculate(estimateValue);
 }
 
 function estimate(overrides: Partial<MonthlyEstimate> = {}): MonthlyEstimate {
@@ -407,5 +434,24 @@ function toPricingRule(item: Record<string, unknown>, id: number): PricingRule {
     maximumFrequencyType: (item.maximumFrequencyType as string | undefined) ?? null,
     maximumFrequencyCount: item.maximumFrequencyCount ? Number(item.maximumFrequencyCount) : null,
     sourceNote: (item.sourceNote as string | undefined) ?? null
+  };
+}
+
+function toHighCostCareLimitRule(item: Record<string, unknown>, id: number): HighCostCareLimitRule {
+  return {
+    id,
+    ruleCode: String(item.ruleCode),
+    category: item.category as HighCostCareLimitRule["category"],
+    effectiveFrom: String(item.effectiveFrom),
+    effectiveTo: item.effectiveTo ? String(item.effectiveTo) : undefined,
+    fixedAmount: Number(item.fixedAmount),
+    medicalCostThreshold: item.medicalCostThreshold === undefined ? undefined : Number(item.medicalCostThreshold),
+    excessRate: Number(item.excessRate),
+    annualLimitAmount: item.annualLimitAmount === undefined ? undefined : Number(item.annualLimitAmount),
+    outpatientAnnualLimitAmount: item.outpatientAnnualLimitAmount === undefined ? undefined : Number(item.outpatientAnnualLimitAmount),
+    versionLabel: String(item.versionLabel),
+    sourceNote: String(item.sourceNote),
+    sourceUrl: String(item.sourceUrl),
+    enabled: true
   };
 }

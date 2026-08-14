@@ -204,14 +204,15 @@
             <div class="total-value">{{ yen(calculation.totals.highCostCareLimitAmount) }}</div>
           </div>
           <div v-if="calculation.totals.copaymentAmount !== undefined" class="total-box">
-            <div class="total-label">{{ calculation.totals.highCostCareLimitAmount !== undefined ? "高額療養費上限適用後の利用者負担額" : "利用者負担額の概算" }}</div>
+            <div class="total-label">{{ calculation.totals.highCostCareLimitAmount !== undefined ? "高額療養費を反映した利用者負担額の概算" : "利用者負担額の概算" }}</div>
             <div class="total-value">{{ yen(calculation.totals.copaymentAmount) }}</div>
           </div>
         </div>
       </template>
 
       <v-alert v-if="store.estimate?.highCostCareLimitCategory !== 'unset'" color="warning" icon="mdi-alert-circle-outline" variant="tonal" class="mt-4">
-        この上限は70歳以上・外来個人ごとの概算です。世帯合算、多数回該当、年間上限、公費、他医療機関分は含みません。
+        <div v-if="calculation?.highCostCareLimitRuleLabel" class="font-weight-bold mb-1">適用制度：{{ calculation.highCostCareLimitRuleLabel }}</div>
+        この上限は70歳以上・外来個人ごとの概算です。年間上限、世帯合算、多数回該当、公費、他医療機関・薬局分は自動計算していません。
       </v-alert>
 
       <div class="action-row">
@@ -274,7 +275,7 @@ const TotalsGrid = defineComponent({
         props.totals.copaymentAmountBeforeLimit !== undefined ? totalBox("上限適用前の利用者負担額", props.yen(props.totals.copaymentAmountBeforeLimit)) : null,
         props.totals.highCostCareLimitAmount !== undefined ? totalBox("高額療養費自己負担限度額", props.yen(props.totals.highCostCareLimitAmount)) : null,
         props.totals.copaymentAmount !== undefined
-          ? totalBox(props.highCostCareLimitSelected ? "高額療養費上限適用後の利用者負担額" : "利用者負担額の概算", props.yen(props.totals.copaymentAmount))
+          ? totalBox(props.highCostCareLimitSelected ? "高額療養費を反映した利用者負担額の概算" : "利用者負担額の概算", props.yen(props.totals.copaymentAmount))
           : null
       ]);
   }

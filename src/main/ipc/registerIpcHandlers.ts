@@ -75,7 +75,7 @@ export function registerIpcHandlers(
     if (!estimate.patientName.trim()) {
       throw new Error("利用者名を入力してください。");
     }
-    const calculator = new MonthlyEstimateCalculator(repository.getPricingRules());
+    const calculator = new MonthlyEstimateCalculator(repository.getPricingRules(), repository.getHighCostCareLimitRules());
     return calculator.calculate(estimate, { startDate: payload.startDate, endDate: payload.endDate });
   });
 

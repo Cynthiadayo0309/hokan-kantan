@@ -1,6 +1,6 @@
 {
   "name": "hokan-kantan",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "訪看かんたん計算 - 施設内訪問看護 月額費用シミュレーター",
   "main": "dist-electron/main/main.js",
   "author": "hokan-kantan",

@@ -76,7 +76,7 @@ export class MonthlyReportExportService {
       throw new Error("利用者名を入力してください。");
     }
     const pricingRules = this.repository.getPricingRules();
-    const calculator = new MonthlyEstimateCalculator(pricingRules);
+    const calculator = new MonthlyEstimateCalculator(pricingRules, this.repository.getHighCostCareLimitRules());
     const pricingVersion: PricingVersion = {
       label: pricingRules.some((rule) => rule.samplePrice) ? "サンプル料金" : "正式料金",
       usesSamplePricing: pricingRules.some((rule) => rule.samplePrice),

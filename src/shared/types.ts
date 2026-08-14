@@ -40,6 +40,23 @@ export type HighCostCareLimitCategory =
   | "low_income_2"
   | "low_income_1";
 
+export type HighCostCareLimitRule = {
+  id?: number;
+  ruleCode: string;
+  category: Exclude<HighCostCareLimitCategory, "unset">;
+  effectiveFrom: string;
+  effectiveTo?: string;
+  fixedAmount: number;
+  medicalCostThreshold?: number;
+  excessRate: number;
+  annualLimitAmount?: number;
+  outpatientAnnualLimitAmount?: number;
+  versionLabel: string;
+  sourceNote: string;
+  sourceUrl: string;
+  enabled: boolean;
+};
+
 export type AdditionType =
   | "none"
   | "long_visit"
@@ -181,6 +198,7 @@ export type MonthlyCalculationResult = {
   totals: CalculationTotals;
   warnings: string[];
   usesSamplePricing: boolean;
+  highCostCareLimitRuleLabel?: string;
   monthlyResults?: MonthlyCalculationPeriodResult[];
   rangeTotal?: CalculationTotals;
 };

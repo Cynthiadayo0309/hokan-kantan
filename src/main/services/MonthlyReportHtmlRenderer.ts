@@ -115,6 +115,7 @@ export function buildMonthlyReportHtml(data: MonthlyReportData): string {
     ${metaItem("管理療養費用人数区分", labels.singleBuildingResidentCategory[estimate.singleBuildingResidentCategory])}
     ${metaItem("特別管理加算", labels.specialManagementCategory[estimate.specialManagementCategory])}
     ${metaItem("高額療養費自己負担限度額", labels.highCostCareLimitCategory[estimate.highCostCareLimitCategory])}
+    ${calculation.highCostCareLimitRuleLabel ? metaItem("高額療養費の適用制度", calculation.highCostCareLimitRuleLabel) : ""}
   </section>
   ${warnings.length ? `<section class="warning-list"><strong>警告・確認事項</strong><ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul></section>` : ""}
   <h2>費用明細</h2>
@@ -145,7 +146,7 @@ export function buildMonthlyReportHtml(data: MonthlyReportData): string {
     ${totalItem("月額費用総額", yen(calculation.totals.grandTotal))}
     ${calculation.totals.copaymentAmountBeforeLimit !== undefined ? totalItem("上限適用前の利用者負担額", yen(calculation.totals.copaymentAmountBeforeLimit)) : ""}
     ${calculation.totals.highCostCareLimitAmount !== undefined ? totalItem("高額療養費自己負担限度額", yen(calculation.totals.highCostCareLimitAmount)) : ""}
-    ${calculation.totals.copaymentAmount !== undefined ? totalItem(calculation.totals.highCostCareLimitAmount !== undefined ? "高額療養費上限適用後の利用者負担額" : "利用者負担額の概算", yen(calculation.totals.copaymentAmount)) : ""}
+    ${calculation.totals.copaymentAmount !== undefined ? totalItem(calculation.totals.highCostCareLimitAmount !== undefined ? "高額療養費を反映した利用者負担額の概算" : "利用者負担額の概算", yen(calculation.totals.copaymentAmount)) : ""}
   </section>
   <div class="footer">出力日時：${escapeHtml(new Date().toLocaleString("ja-JP"))}</div>
 </body>
